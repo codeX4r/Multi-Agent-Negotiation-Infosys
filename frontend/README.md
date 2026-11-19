@@ -1,48 +1,208 @@
 # Negotiation Arena — Frontend
 
-A separate Next.js frontend intended to connect to your FastAPI backend later. It is intentionally isolated from backend implementation and database code.
+The frontend application for the **AI-Driven Multi-Agent Negotiation Training & Simulation Platform**.
 
-## Stack
-- Next.js App Router
-- React + TypeScript
-- Lucide icons
-- REST API client abstraction
+Built with Next.js, React and TypeScript, the application provides an interactive environment for configuring negotiation scenarios, setting up AI agents, participating in negotiations and reviewing outcomes.
 
-## Run locally
-1. Extract this folder.
-2. Open it in VS Code.
-3. Run `npm install`.
-4. Copy `.env.example` to `.env.local`.
-5. Set `NEXT_PUBLIC_API_BASE_URL` to your FastAPI base URL.
-6. Run `npm run dev`.
-7. Open http://localhost:3000.
+## Overview
 
-The UI can be explored before the backend is ready. Session creation and turn actions require the API endpoints below.
+Negotiation Arena supports two operating modes:
 
-## Expected FastAPI endpoints
+- **Simulation Mode:** Observe autonomous AI agents negotiate with one another.
+- **Practice Mode:** Participate as a negotiating party against AI agents.
 
-| Method | Endpoint | Purpose |
+The frontend provides the user-facing workflow. Agent reasoning, orchestration, negotiation decisions and persistence belong to the backend.
+
+## Technology Stack
+
+| Technology | Purpose |
+|---|---|
+| Next.js 15 | React application framework |
+| React 19 | UI development |
+| TypeScript | Static typing |
+| Tailwind CSS 4 | Styling |
+| Zustand | Client-side state management |
+| React Hook Form | Form management |
+| Zod | Data validation |
+| Lucide React | Icons |
+| Vitest | Unit testing |
+| Playwright | Browser-based testing |
+
+## Application Workflow
+
+The current application is organized around these screens:
+
+1. **Home:** Application entry point.
+2. **Mode Selection:** Choose Simulation or Practice Mode.
+3. **Scenario Selection:** Select a negotiation scenario.
+4. **Agent Setup:** Configure agent personalities and skill levels.
+5. **Briefing:** Review the negotiation context.
+6. **Negotiation Arena:** Interact with the negotiation transcript and session.
+7. **Outcome:** Review negotiation results.
+8. **Replay:** Access the replay experience.
+
+## Supported Scenario Templates
+
+The platform specification defines three predefined scenarios:
+
+- Vendor Pricing Negotiation
+- Job Offer Negotiation
+- Project Budget Allocation
+
+## Project Structure
+
+```text
+frontend/
+├── public/                  # Static assets
+├── src/
+│   ├── app/                 # Next.js App Router
+│   ├── components/          # Shared UI components
+│   ├── features/
+│   │   ├── home/
+│   │   ├── mode/
+│   │   ├── scenario/
+│   │   ├── setup/
+│   │   ├── briefing/
+│   │   ├── arena/
+│   │   ├── outcome/
+│   │   ├── replay/
+│   │   └── sessions/
+│   ├── lib/                 # Shared utilities and API client
+│   ├── stores/              # Zustand stores
+│   └── types/               # TypeScript interfaces
+├── tests/                   # Automated tests
+├── package.json
+├── next.config.ts
+├── playwright.config.ts
+├── vitest.config.ts
+└── README.md
+```
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js (compatible with Next.js 15)
+- npm
+- Git
+
+### Installation
+
+From the repository root:
+
+```bash
+cd frontend
+npm install
+```
+
+### Environment Configuration
+
+Create a `.env.local` file in the frontend directory.
+
+```env
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8000/api/v1
+```
+
+Use the appropriate backend URL for your environment.
+
+Never put private API keys, database credentials or LLM provider secrets in frontend environment variables.
+
+### Run Development Server
+
+```bash
+npm run dev
+```
+
+Open:
+
+```text
+http://localhost:3000
+```
+
+### Production Build
+
+```bash
+npm run build
+npm run start
+```
+
+### Linting
+
+```bash
+npm run lint
+```
+
+### Testing
+
+Run the available Vitest and Playwright test suites using their respective configurations.
+
+```bash
+npx vitest run
+npx playwright test
+```
+
+## Backend Integration
+
+The frontend uses a dedicated session API abstraction.
+
+Expected integration endpoints:
+
+| Method | Endpoint | Description |
 |---|---|---|
 | POST | `/api/v1/sessions` | Create a negotiation session |
-| GET | `/api/v1/sessions/{session_id}` | Get authorised public session state |
-| POST | `/api/v1/sessions/{session_id}/turns` | Submit participant message |
-| POST | `/api/v1/sessions/{session_id}/turns/next` | Ask orchestrator for next AI turn |
-| GET | `/api/v1/sessions/{session_id}/report` | Get outcome report |
+| GET | `/api/v1/sessions/{session_id}` | Retrieve session state |
+| POST | `/api/v1/sessions/{session_id}/turns` | Submit a participant message |
+| POST | `/api/v1/sessions/{session_id}/turns/next` | Request the next AI turn |
+| GET | `/api/v1/sessions/{session_id}/report` | Retrieve the outcome report |
 
-The request/response shapes are represented in `src/types/negotiation.ts` and `src/features/sessions/session-api.ts`. Align the backend schemas with these contracts or update the frontend types/client accordingly.
+These are expected API contracts, not a claim that all corresponding backend endpoints are currently available.
 
-## Security boundary — mandatory
+The TypeScript definitions in `src/types/negotiation.ts` and API functions in `src/features/sessions/session-api.ts` define the current frontend integration expectations.
 
-- Do not put LLM provider API keys in this frontend.
-- Do not send every agent's private goals, BATNAs, hidden preferences or internal reasoning to the browser.
-- The backend must own orchestration, private agent state, offer evaluation, deadlock handling and LLM calls.
-- In Practice Mode, return only the human participant's authorised private briefing plus public session state.
-- Treat all client input as untrusted and validate it again in FastAPI.
+## Security Considerations
 
-## Current scope
+- Never expose LLM provider API keys in the browser.
+- Keep private agent goals, BATNAs, hidden preferences and internal reasoning on the backend.
+- Return only session information the requesting participant is authorized to access.
+- Validate all client-provided data on the backend.
+- Do not treat frontend validation as a replacement for backend validation.
+- Configure CORS on the backend for approved frontend origins.
 
-Implemented: home, mode selection, three scenario templates, table configuration, briefing, transcript-based arena, API client wiring.
+## Current Implementation Status
 
-Not yet implemented: authentication, session listing, full report/replay lab, advanced metrics, streaming updates, voice input, custom scenario builder, production error boundaries and automated tests.
+The frontend README and application source describe the following scope.
 
-This is a frontend foundation, not a completed production product.
+**Implemented frontend foundation:**
+- Application screens and navigation.
+- Scenario selection workflow.
+- Agent configuration interfaces.
+- Negotiation arena interface.
+- Session API client abstraction.
+- TypeScript negotiation models.
+
+**Remaining development areas:**
+- Authentication and authorization.
+- Complete backend-connected session lifecycle.
+- Production-ready outcome reporting and replay.
+- Advanced negotiation metrics.
+- Streaming updates.
+- Custom scenario creation.
+- Comprehensive automated test coverage.
+- Production error handling.
+
+## Development Guidelines
+
+- Use TypeScript for application code.
+- Keep feature-specific components inside their respective feature directories.
+- Keep shared components reusable.
+- Keep API communication inside the API/service layer.
+- Maintain consistent types between frontend and backend.
+- Avoid committing environment secrets and generated build artifacts.
+- Follow the team's branch and pull-request workflow.
+
+---
+
+**Project:** AI-Driven Multi-Agent Negotiation Training & Simulation Platform
+**Frontend:** Next.js + TypeScript
+**Backend:** FastAPI
+**Database:** MongoDB
