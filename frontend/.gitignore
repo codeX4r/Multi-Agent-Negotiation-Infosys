@@ -1,0 +1,97 @@
+
+# ==============================
+# Dependencies
+# ==============================
+node_modules/
+.pnp/
+.pnp.*
+.yarn/*
+
+# ==============================
+# Next.js
+# ==============================
+.next/
+out/
+.next-build/
+
+# ==============================
+# Production Build
+# ==============================
+build/
+dist/
+
+# ==============================
+# Environment Variables
+# ==============================
+.env
+.env.*
+!.env.example
+!.env.local.example
+
+# ==============================
+# Testing - Playwright
+# ==============================
+playwright-report/
+test-results/
+playwright/.cache/
+
+# ==============================
+# Testing - Vitest
+# ==============================
+coverage/
+.nyc_output/
+.vitest/
+
+# ==============================
+# TypeScript
+# ==============================
+*.tsbuildinfo
+next-env.d.ts
+
+# ==============================
+# ESLint
+# ==============================
+.eslintcache
+
+# ==============================
+# Logs
+# ==============================
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+*.log
+
+# ==============================
+# IDE / Editors
+# ==============================
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+
+# ==============================
+# OS Files
+# ==============================
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# ==============================
+# Cache
+# ==============================
+.cache/
+.turbo/
+.vercel/
+
+# ==============================
+# Temporary Files
+# ==============================
+*.tmp
+*.bak
+*.orig
+.calude
+.agents
+AGENTS.md
+claude.md
+skills-lock.json
