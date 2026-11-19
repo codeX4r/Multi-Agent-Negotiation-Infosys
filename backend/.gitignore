@@ -1,0 +1,104 @@
+
+# ==============================
+# Python
+# ==============================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# ==============================
+# Virtual Environments
+# ==============================
+venv/
+.venv/
+env/
+ENV/
+.python-version
+
+# ==============================
+# Environment Variables / Secrets
+# ==============================
+.env
+.env.*
+!.env.example
+!.env.template
+
+# ==============================
+# Testing / Coverage
+# ==============================
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+test-results/
+
+# ==============================
+# Type Checking / Linting
+# ==============================
+.mypy_cache/
+.dmypy.json
+.pyre/
+.ruff_cache/
+.pytype/
+
+# ==============================
+# FastAPI / Application Logs
+# ==============================
+*.log
+logs/
+uvicorn.log
+
+# ==============================
+# IDEs / Editors
+# ==============================
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# ==============================
+# Build / Distribution
+# ==============================
+build/
+dist/
+*.egg-info/
+.eggs/
+wheels/
+pip-wheel-metadata/
+
+# ==============================
+# Jupyter
+# ==============================
+.ipynb_checkpoints/
+
+# ==============================
+# Temporary Files
+# ==============================
+*.tmp
+*.bak
+*.orig
+.cache/
+
+# ==============================
+# Database Files
+# ==============================
+*.sqlite3
+*.db
+
+# ==============================
+# OS
+# ==============================
+Thumbs.db
+Desktop.ini
+
+# ==============================
+# Package Managers
+# ==============================
+pip-wheel-metadata/
+poetry.lock.tmp
