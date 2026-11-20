@@ -104,11 +104,10 @@ function OfferForm({
 
 /* ── Seat avatar rendered on the round table ── */
 function Seat({
-  agent, state, agentState, isHumanTurn, isSpeaking,
+  agent, state, isHumanTurn, isSpeaking,
 }: {
   agent: Agent;
   state: SimulationState;
-  agentState: any;
   isHumanTurn: boolean;
   isSpeaking: boolean;
 }) {
@@ -122,17 +121,17 @@ function Seat({
   })[(idx - rotation + n) % n];
 
   const emo = state.emo?.[agent.id] || { v: 0.15, a: 0.3, hist: [0.15], ahist: [0.3] };
-  const face  = getEmotionFace(emo);
+  const face = getEmotionFace(emo);
   const label = getEmotionLabel(emo);
 
   const dotStyle = {
     left: `${10 + emo.a * 80}%`,
-    top:  `${50 - emo.v * 40}%`,
+    top: `${50 - emo.v * 40}%`,
     background:
       emo.v > 0.1 ? '#67d6a3' : emo.v > -0.2 ? '#f4c66a' : '#f08b91',
   };
 
-  const hist   = emo.hist.slice(-20);
+  const hist = emo.hist.slice(-20);
   const points = hist
     .map((v, i) =>
       `${((i / Math.max(1, hist.length - 1)) * 62 + 1).toFixed(1)},${(12 - v * 10).toFixed(1)}`,
@@ -146,16 +145,15 @@ function Seat({
     (agent.human
       ? 'neutral'
       : PERSONALITIES[agent.personality as keyof typeof PERSONALITIES]?.label
-          .toLowerCase() || 'firm');
+        .toLowerCase() || 'firm');
   const toneChipClass = `chipx stc ${tone}`;
 
   let decisionChip: React.ReactNode = null;
   if (lastEntry && lastEntry.decision !== 'message') {
     decisionChip = (
       <span
-        className={`chipx dec ${
-          lastEntry.decision === 'open' ? 'open' : lastEntry.decision
-        }`}
+        className={`chipx dec ${lastEntry.decision === 'open' ? 'open' : lastEntry.decision
+          }`}
       >
         {lastEntry.decision}
       </span>
@@ -400,11 +398,10 @@ export function ArenaScreen() {
   } = useUIStore();
 
   const { engineState, transcript, tableOffer, concessionLines, stanceBars,
-    zopaOverlap, deadlockRisk, deadlockStalled, agreementLikelihood,
-    agentStates, innerVoiceText, currentSpeaker } = useSessionStore();
+    zopaOverlap, deadlockRisk, agreementLikelihood, currentSpeaker } = useSessionStore();
 
   const { initialize, togglePlay, stepOnce, togglePause, sendMessage,
-    acceptOffer, walkAway, suggestConcession, getCoachHints,
+    acceptOffer, walkAway, suggestConcession,
     runLoop } = useSimulation();
 
   useEffect(() => {
@@ -441,25 +438,18 @@ export function ArenaScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const {
-    initialize, togglePlay, stepOnce, togglePause,
-    sendMessage, acceptOffer, walkAway,
-    suggestConcession, getCoachHints, runLoop,
-  } = useSimulation();
-
   /* Derived values */
-  const scenario   = engineState ? getScenario(engineState.scenario) : null;
-  const isSim      = !engineState?.agents.some((a) => a.human);
-  const prac       = !isSim;
-  const human      = engineState?.agents.find((a) => a.human) || null;
-  const myTurn     = prac && engineState?.waitingHuman && human != null;
+  const scenario = engineState ? getScenario(engineState.scenario) : null;
+  const isSim = !engineState?.agents.some((a) => a.human);
+  const prac = !isSim;
+  const human = engineState?.agents.find((a) => a.human) || null;
+  const myTurn = prac && engineState?.waitingHuman && human != null;
 
   const msgInputRef = useRef<HTMLInputElement>(null);
-  const [draft, setDraft]               = useState('');
-  const [showOfferForm, setShowOfferForm]         = useState(false);
-  const [offerFormValues, setOfferFormValues]     = useState<Record<string, number>>({});
-  const [hintIndex, setHintIndex]       = useState(0);
-  const [leftCollapsed, setLeftCollapsed]  = useState(false);
+  const [draft, setDraft] = useState('');
+  const [showOfferForm, setShowOfferForm] = useState(false);
+  const [offerFormValues, setOfferFormValues] = useState<Record<string, number>>({});
+  const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [rightCollapsed, setRightCollapsed] = useState(false);
 
   /* ── Auto-initialize when arriving at arena without an engine state ──
@@ -521,7 +511,6 @@ export function ArenaScreen() {
     if (x) {
       setShowOfferForm(true);
       setOfferFormValues(x);
-      setHintIndex(0);
       useSessionStore.getState().setInnerVoiceText(
         'Suggested concession computed from your priorities — it gives ground on your low-weight issues first. Adjust, then Send.',
       );
@@ -541,12 +530,11 @@ export function ArenaScreen() {
   }
 
   /* ── Computed display values ── */
-  const lim           = engineState.maxRounds;
+  const lim = engineState.maxRounds;
   const roundProgress = engineState.round
     ? ((engineState.round - 1) / Math.max(1, lim)) * 100
     : 0;
-  const pressure  = engineState.pressure * 100;
-  const autonomy  = 2; // default; config autonomy not stored in session yet
+  const pressure = engineState.pressure * 100;
 
   /* ── Tone preview (practice only) ── */
   let tonePreview: { label: string; p: Record<string, number> } | null = null;
@@ -571,20 +559,19 @@ export function ArenaScreen() {
             </div>
             <div className="row" style={{ gap: 6, marginTop: 3 }}>
               <span
-                className={`pill ${
-                  engineState.status === 'running' && !arenaPaused
-                    ? 'live'
-                    : engineState.status === 'deal'
+                className={`pill ${engineState.status === 'running' && !arenaPaused
+                  ? 'live'
+                  : engineState.status === 'deal'
                     ? 'live'
                     : 'bad'
-                }`}
+                  }`}
                 id="a-status"
               >
                 {engineState.status === 'running' && !arenaPaused
                   ? 'Live'
                   : engineState.status === 'deal'
-                  ? 'Deal'
-                  : 'No deal'}
+                    ? 'Deal'
+                    : 'No deal'}
               </span>
               <span className="pill" id="a-mode">
                 {isSim ? 'Simulation' : 'Practice'}
@@ -731,7 +718,6 @@ export function ArenaScreen() {
             <TrustThreads state={engineState} />
             <div className="bigtable" id="bigtable"></div>
 
-            {/* Offer on table */}
             {tableOffer && (
               <OfferCard
                 offer={tableOffer}
@@ -741,7 +727,6 @@ export function ArenaScreen() {
               />
             )}
 
-            {/* Seats */}
             <div
               id="seats"
               className={engineState.agents.length >= 4 ? 'many' : ''}
@@ -751,112 +736,30 @@ export function ArenaScreen() {
                   key={agent.id}
                   agent={agent}
                   state={engineState}
-                  agentState={agentStates.get(agent.id)}
                   isHumanTurn={prac && (engineState.waitingHuman ?? false) && human?.id === agent.id}
                   isSpeaking={currentSpeaker === agent.id}
                 />
               ))}
             </div>
-            <Button className="primary" onClick={handleSend} disabled={!draft.trim() && !showOfferForm}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7" /></svg>
-            </Button>
-          </div>
-          <div className="row" style={{ marginTop: 9, gap: 7 }}>
-            <Button className="btn sm" onClick={() => { setShowOfferForm(true); setOfferFormValues(offerFormValues); }}>Make offer</Button>
-            <Button className="btn sm" onClick={() => { setShowOfferForm(true); setOfferFormValues(offerFormValues); }}>Counter</Button>
-            <Button className="btn sm" onClick={handleConcede}>Concede</Button>
-            <Button className="btn sm" style={{ borderColor: '#2f7a59' }} onClick={handleAccept}>Accept</Button>
-            <span style={{ flex: 1 }}></span>
-            <span className="mini" id="turnhint">{myTurn ? (tableOffer && tableOffer.by !== human?.id ? 'Respond to the offer on the table' : 'Make your move') : ''}</span>
-            <Button className="btn sm danger" onClick={handleWalkAway}>Walk away</Button>
-          </div>
-        </div>
-      </main>
-
-      <aside className="card side" id="rightside">
-        <button className="colbtn" onClick={() => { /* collapse right */ }}>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6" /></svg>
-        </button>
-        <h3>Metrics</h3>
-        <p className="mini">Live from the state store</p>
-        <div className="sect">
-          <h4>Concession lines</h4>
-          <ConcessionChart lines={concessionLines} agents={engineState.agents} />
-          <div className="legend" id="chartleg">
-            {engineState.agents.map(agent => (
-              <span key={agent.id}><i style={{ background: agent.color }}></i>{agent.human ? 'You' : agent.name}</span>
-            ))}
           </div>
 
-          {/* ══ Simulation controls — shown in Simulation mode ══ */}
-          {isSim && (
-            <div id="simctl" className="simctl">
-              <button
-                className="btn primary"
-                id="playbtn"
-                onClick={() => togglePlay()}
-              >
-                {arenaPlaying ? 'Pause' : 'Play'}
-              </button>
-              <button className="btn" onClick={() => stepOnce()}>
-                Next turn
-              </button>
-              <span className="mini">Speed</span>
-              <div className="seg" id="speedseg">
-                {[0.5, 1, 2, 4].map((s) => (
-                  <button
-                    key={s}
-                    className={simulationSpeed === s ? 'on' : ''}
-                    onClick={() => setSimulationSpeed(s)}
-                  >
-                    {s}×
-                  </button>
-                ))}
-              </div>
-            );
-          })}
-          <div className="row between mini"><span>flexible</span><span>firm</span></div>
-        </div>
-        <div className="sect">
-          <h4>ZOPA overlap</h4>
-          <ZOPAGauge value={zopaOverlap} />
-          <p className='muted' >
-            {prac ? 'estimated, opponents hidden' : 'deal zone overlap'}
-          </p>
-        </div>
-        <div className="sect">
-          <h4>Deadlock risk</h4>
-          <div className="metricline" style={{ marginTop: 0 }}>
-            <span id="dl-note">Stalled {engineState.deadlock.stalled} rd{engineState.deadlock.stalled === 1 ? '' : 's'}, trigger at {3}</span>
-            <strong id="dl-val">{Math.round(deadlockRisk * 100)}%</strong>
-          </div>
-          <div className="bar risk"><span id="dl-bar" style={{ width: `${deadlockRisk * 100}%` }}></span></div>
-        </div>
-        <div className="sect">
-          <h4>Agreement likelihood</h4>
-          <div className="metricline" style={{ marginTop: 0 }}>
-            <span>Engine estimate</span><strong id="al-val">{Math.round(agreementLikelihood * 100)}%</strong>
-          </div>
-          <div className="bar"><span id="al-bar" style={{ width: `${agreementLikelihood * 100}%` }}></span></div>
-        </div>
-      </aside>
-    </section>
-  );
-}
-
-          {/* ══ Composer — shown in Practice mode ══ */}
+          {/* Composer — shown in Practice mode */}
           {prac && (
             <div id="composer" className="composer">
               {showOfferForm && human && (
                 <OfferForm
                   values={offerFormValues}
                   onChange={setOfferFormValues}
-                  onClose={() => { setShowOfferForm(false); setOfferFormValues({}); }}
+                  onClose={() => {
+                    setShowOfferForm(false);
+                    setOfferFormValues({});
+                  }}
                   onSend={handleSend}
                   scenario={scenario}
                   human={human}
                 />
               )}
+
               <div className="line">
                 <input
                   ref={msgInputRef}
@@ -865,10 +768,11 @@ export function ArenaScreen() {
                   placeholder="Type your offer or reply, e.g. I can do ₹10.5L if delivery is 20 days"
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') void handleSend();
+                  }}
                 />
 
-                {/* Tone preview */}
                 <div className="toneprev" data-tip="Live tone preview (trained classifier)">
                   <div
                     className="toneorb"
@@ -888,7 +792,7 @@ export function ArenaScreen() {
                         id="tonemeter"
                         style={{
                           width: tonePreview
-                            ? `${Math.min(100, tonePreview.p.pushy * 100)}%`
+                            ? `${Math.min(100, (tonePreview.p.pushy || 0) * 100)}%`
                             : '0%',
                         }}
                       ></span>
@@ -898,26 +802,36 @@ export function ArenaScreen() {
 
                 <button
                   className="btn primary"
-                  onClick={handleSend}
+                  onClick={() => void handleSend()}
                   disabled={!draft.trim() && !showOfferForm}
                 >
                   Send
                 </button>
               </div>
+
               <div className="row" style={{ marginTop: 9, gap: 7 }}>
-                <button className="btn sm" onClick={() => { setShowOfferForm(true); }}>
+                <button
+                  className="btn sm"
+                  onClick={() => setShowOfferForm(true)}
+                  disabled={!myTurn}
+                >
                   Make offer
                 </button>
-                <button className="btn sm" onClick={() => { setShowOfferForm(true); }}>
+                <button
+                  className="btn sm"
+                  onClick={() => setShowOfferForm(true)}
+                  disabled={!myTurn}
+                >
                   Counter
                 </button>
-                <button className="btn sm" onClick={handleConcede}>
+                <button className="btn sm" onClick={handleConcede} disabled={!myTurn}>
                   Concede
                 </button>
                 <button
                   className="btn sm"
                   style={{ borderColor: '#2f7a59' }}
-                  onClick={handleAccept}
+                  onClick={() => void handleAccept()}
+                  disabled={!myTurn || !tableOffer || tableOffer.by === human?.id}
                 >
                   Accept
                 </button>
@@ -929,7 +843,11 @@ export function ArenaScreen() {
                       : 'Make your move'
                     : ''}
                 </span>
-                <button className="btn sm danger" onClick={handleWalkAway}>
+                <button
+                  className="btn sm danger"
+                  onClick={() => void handleWalkAway()}
+                  disabled={!myTurn}
+                >
                   Walk away
                 </button>
               </div>
@@ -949,6 +867,7 @@ export function ArenaScreen() {
           >
             {rightCollapsed ? '⟨' : '⟩'}
           </button>
+
           {!rightCollapsed && (
             <>
               <h3>Metrics</h3>
@@ -970,8 +889,8 @@ export function ArenaScreen() {
               <div className="sect">
                 <h4>Stance</h4>
                 {engineState.agents.map((agent) => {
-                  const T =
-                    stanceBars.find((s) => s.agentId === agent.id)?.target || 0;
+                  const target =
+                    stanceBars.find((item) => item.agentId === agent.id)?.target || 0;
                   return (
                     <div key={agent.id} className="stance">
                       <span style={{ color: agent.color, fontWeight: 700 }}>
@@ -981,7 +900,7 @@ export function ArenaScreen() {
                         <div className="bar" style={{ margin: 0 }}>
                           <span
                             style={{
-                              width: `${T * 100}%`,
+                              width: `${target * 100}%`,
                               background: `linear-gradient(90deg, ${agent.color}88, ${agent.color})`,
                             }}
                           ></span>
@@ -1004,78 +923,101 @@ export function ArenaScreen() {
                 </div>
               </div>
 
-  return (
-    <div
-      className={`seat ${pos.y < 45 ? 'top' : ''} ${isSpeaking ? 'speaking' : ''} ${isHumanTurn ? 'waiting' : ''}`}
-      id={`seat-${agent.id}`}
-      style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
-    >
-      <div className="bubble"></div>
-      <div className="thought hidden"></div>
-      <div className="fig">
-        <div className="ring"></div>
-        <svg viewBox="0 0 92 96" style={{ width: '100%', height: '100%' }}>
-          <defs>
-            <linearGradient id={`fg${agent.id}`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stopColor={agent.color} />
-              <stop offset="1" stopColor={agent.color + '88'} />
-            </linearGradient>
-          </defs>
-          <rect x="12" y="34" width="68" height="58" rx="16" fill="#0b1426" stroke="#ffffff18" />
-          <path d="M14 94 C14 66 28 54 46 54 C64 54 78 66 78 94 Z" fill={`url(#fg${agent.id})`} />
-          <path d="M38 56 L46 70 L54 56" fill="#ffffff30" />
-          <circle cx="46" cy="24" r="21" fill={agent.color} opacity="0.95" />
-          <circle cx="46" cy="24" r="21" fill={`url(#fg${agent.id})`} opacity="0.4" />
-        </svg>
-        <div className="face">{face}</div>
-      </div>
-      <div className="plate">
-        <div className="nm"><span className="dot" style={{ width: 9, height: 9, background: agent.color }}></span>{agent.human ? `You (${agent.name})` : agent.name}</div>
-        <div className="chips">
-          <span className={toneChipClass}>{tone}</span>
-          {decisionChip}
-        </div>
-        <div className="emo">
-          <div className="orb"><i style={dotStyle as React.CSSProperties}></i></div>
-          <svg className="spark" viewBox="0 0 64 24">
-            <line x1="0" x2="64" y1="12" y2="12" stroke="#ffffff18" />
-            <polyline points={points} fill="none" stroke={agent.color} strokeWidth="1.8" strokeLinejoin="round" />
-            {hist.length > 0 && <circle cx={`${(hist.length - 1) / Math.max(1, hist.length - 1) * 62 + 1}`} cy={`${12 - hist[hist.length - 1] * 10}`} r="2.5" fill={agent.color} />}
-          </svg>
-          <span className="mini emolbl" style={{ minWidth: 44, textAlign: 'left' }}>{label}</span>
-        </div>
+              <div className="sect">
+                <h4>Deadlock risk</h4>
+                <div className="metricline" style={{ marginTop: 0 }}>
+                  <span>
+                    Stalled {engineState.deadlock.stalled} rd
+                    {engineState.deadlock.stalled === 1 ? '' : 's'}, trigger at 3
+                  </span>
+                  <strong>{Math.round(deadlockRisk * 100)}%</strong>
+                </div>
+                <div className="bar risk">
+                  <span style={{ width: `${deadlockRisk * 100}%` }}></span>
+                </div>
+              </div>
+
+              <div className="sect">
+                <h4>Agreement likelihood</h4>
+                <div className="metricline" style={{ marginTop: 0 }}>
+                  <span>Engine estimate</span>
+                  <strong>{Math.round(agreementLikelihood * 100)}%</strong>
+                </div>
+                <div className="bar">
+                  <span style={{ width: `${agreementLikelihood * 100}%` }}></span>
+                </div>
+              </div>
+
+              {isSim && (
+                <div id="simctl" className="simctl">
+                  <button
+                    className="btn primary"
+                    id="playbtn"
+                    onClick={() => togglePlay()}
+                  >
+                    {arenaPlaying ? 'Pause' : 'Play'}
+                  </button>
+                  <button className="btn" onClick={() => stepOnce()}>
+                    Next turn
+                  </button>
+                  <span className="mini">Speed</span>
+                  <div className="seg" id="speedseg">
+                    {[0.5, 1, 2, 4].map((speed) => (
+                      <button
+                        key={speed}
+                        className={simulationSpeed === speed ? 'on' : ''}
+                        onClick={() => setSimulationSpeed(speed)}
+                      >
+                        {speed}×
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </aside>
       </div>
     </section>
   );
 }
 
 /* ── Transcript message bubble ── */
-function TranscriptMsg({ entry, agents }: { entry: TranscriptEntry; agents: Agent[] }) {
-  const isMe = agents.find((a) => a.human && a.id === entry.by);
-  const isOrch = entry.by === 'orchestrator';
+function TranscriptMsg({
+  entry,
+  agents,
+}: {
+  entry: TranscriptEntry;
+  agents: Agent[];
+}) {
+  const agent = agents.find((item) => item.id === entry.by);
+  const isMe = Boolean(agent?.human);
+  const isOrchestrator = entry.by === 'orchestrator';
   const isEvent = entry.kind === 'event';
   const isRound = entry.kind === 'round';
   const isDeal = entry.kind === 'deal';
-  const isBreak = entry.kind === 'breakdown';
+  const isBreakdown = entry.kind === 'breakdown';
 
-  let cls = 'msg';
-  if (isMe) cls += ' me';
-  else if (isRound) cls += ' round';
-  else if (isEvent) cls += ' ev';
-  else if (isDeal) cls += ' deal';
-  else if (isBreak) cls += ' brk';
-  else if (isOrch) cls += ' sys';
-
-  const agent = agents.find((a) => a.id === entry.by);
-  const color = agent?.color || '#9aa9c2';
+  let className = 'msg';
+  if (isMe) className += ' me';
+  else if (isRound) className += ' round';
+  else if (isEvent) className += ' ev';
+  else if (isDeal) className += ' deal';
+  else if (isBreakdown) className += ' brk';
+  else if (isOrchestrator) className += ' sys';
 
   return (
-    <svg className="gauge" viewBox="0 0 160 92" width="160">
-      <path d="M80 82 A62 62 0 0 1 80 82" stroke="#25324c" strokeWidth="12" fill="none" strokeLinecap="round" />
-      <path d="M80 82 A62 62 0 0 1 ${x} ${y}" stroke="color" strokeWidth="12" fill="none" strokeLinecap="round" />
-      <line x1="80" y1="82" x2={x} y2={y} stroke="#eef3ff" strokeWidth="3" strokeLinecap="round" />
-      <circle cx="80" cy="82" r="6" fill="#eef3ff" />
-      <text x="80" y="66" textAnchor="middle" fill="#eef3ff" fontSize="17" fontWeight="800">{Math.round(value * 100)}%</text>
-    </svg>
+    <div className={className}>
+      <div className="msghead">
+        <strong style={{ color: agent?.color || '#9aa9c2' }}>
+          {agent?.name || (isOrchestrator ? 'Orchestrator' : entry.by)}
+        </strong>
+        {entry.tone && <span className={`chipx stc ${entry.tone}`}>{entry.tone}</span>}
+        {entry.decision && entry.decision !== 'message' && (
+          <span className={`chipx dec ${entry.decision}`}>{entry.decision}</span>
+        )}
+      </div>
+      <div className="msgbody">{entry.text}</div>
+    </div>
   );
 }

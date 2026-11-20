@@ -15,7 +15,7 @@ import type {
 import { useUIStore } from "@/stores/ui-store";
 import { useConfigStore } from "@/stores/config-store";
 import { useSessionStore } from "@/stores/session-store";
-import { useShallow } from 'zustand/react/shallow';
+
 
 let activeSim: Simulation | null = null;
 
@@ -219,12 +219,7 @@ const ui = useUIStore(
           );
         }
 
-        const initialState = sim.getState();
 
-        if (initialState) {
-          session.setEngineState(initialState);
-          session.setTranscript(initialState.transcript || []);
-        }
 
         setIsInitialized(true);
         return sim;
@@ -243,15 +238,20 @@ const ui = useUIStore(
   );
 
   // Main simulation loop
-  const runLoop = useCallback(async (force=false) => {
-    const sim = simRef.current;
-    if (!sim || !isInitialized) return;
+const runLoop = useCallback(async (force = false) => {
+  const sim = simRef.current;
 
-    let loopCount = 0;
-    const maxLoops = 100; // Safety limit
+  if (!sim || !isInitialized || isLoopingRef.current) return;
 
+  isLoopingRef.current = true;
+
+  let loopCount = 0;
+  const maxLoops = 100;
+
+  try {
     while (loopCount < maxLoops) {
       const state = sim.getState();
+
       if (
         !state ||
         state.status !== "running" ||
@@ -261,34 +261,44 @@ const ui = useUIStore(
         break;
       }
 
-        const currentUI = useUIStore.getState();
-        if (currentUI.arenaPaused) {
-          await new Promise((r) => setTimeout(r, 150));
-          continue;
-        }
+      const currentUI = useUIStore.getState();
 
-      if (!force && !ui.arenaPlaying && !session.replayPlaying) break;
-
-        const result = await sim.step();
-        session.setEngineState(sim.getState());
-
-        if (!result) break;
-
-        // Delay between steps
-        const speed = useUIStore.getState().simulationSpeed;
-        const delay = speed > 0 ? 260 / speed : 120;
-        await new Promise((r) => setTimeout(r, delay));
-
-        loopCount++;
+      if (currentUI.arenaPaused) {
+        await new Promise((resolve) => setTimeout(resolve, 150));
+        continue;
       }
-    } finally {
-      isLoopingRef.current = false;
-      const finalState = sim.getState();
-      if (!finalState || finalState.status !== "running") {
-        useUIStore.getState().setArenaPlaying(false);
+
+      if (
+        !force &&
+        !currentUI.arenaPlaying &&
+        !session.replayPlaying
+      ) {
+        break;
       }
+
+      const result = await sim.step();
+
+      session.setEngineState(sim.getState());
+
+      if (!result) break;
+
+      const speed = useUIStore.getState().simulationSpeed;
+      const delay = speed > 0 ? 260 / speed : 120;
+
+      await new Promise((resolve) => setTimeout(resolve, delay));
+
+      loopCount++;
     }
-  }, [session]);
+  } finally {
+    isLoopingRef.current = false;
+
+    const finalState = sim.getState();
+
+    if (!finalState || finalState.status !== "running") {
+      useUIStore.getState().setArenaPlaying(false);
+    }
+  }
+}, [session, isInitialized]);
 
   // Toggle play/pause
   const togglePlay = useCallback(

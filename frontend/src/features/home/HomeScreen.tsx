@@ -9,7 +9,7 @@ import { getScenario } from '@/engine/scenarios';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { SEAT_COLORS } from '@/engine/types';
-import { getScenario } from '@/engine/scenarios';
+
 
 interface SeatDemo {
   n: string;
