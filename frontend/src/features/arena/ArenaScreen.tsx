@@ -93,12 +93,46 @@ export function ArenaScreen() {
   } = useUIStore();
 
   const { engineState, transcript, tableOffer, concessionLines, stanceBars,
-          zopaOverlap, deadlockRisk, deadlockStalled, agreementLikelihood,
-          agentStates, innerVoiceText, currentSpeaker } = useSessionStore();
+    zopaOverlap, deadlockRisk, deadlockStalled, agreementLikelihood,
+    agentStates, innerVoiceText, currentSpeaker } = useSessionStore();
 
   const { initialize, togglePlay, stepOnce, togglePause, sendMessage,
-          acceptOffer, walkAway, suggestConcession, getCoachHints,
-          runLoop } = useSimulation();
+    acceptOffer, walkAway, suggestConcession, getCoachHints,
+    runLoop } = useSimulation();
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const startSession = async () => {
+      try {
+        await initialize();
+
+        if (cancelled) return;
+
+        const state = useSessionStore.getState().engineState;
+
+        if (state?.agents.some((agent) => agent.human)) {
+          // Practice: run until the human's turn.
+          setArenaPlaying(true);
+          runLoop(true);
+        } else {
+          // Simulation: automatically start AI vs AI.
+          togglePlay(true);
+        }
+      } catch {
+        // initialize() already displays the error.
+      }
+    };
+
+    void startSession();
+
+    return () => {
+      cancelled = true;
+    };
+
+    // Initialize once whenever the Arena screen is entered.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const scenario = engineState ? getScenario(engineState.scenario) : null;
   const config = engineState ? {
@@ -308,7 +342,7 @@ export function ArenaScreen() {
               )}
             </div>
             <Button className="primary" onClick={handleSend} disabled={!draft.trim() && !showOfferForm}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7"/></svg>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7" /></svg>
             </Button>
           </div>
           <div className="row" style={{ marginTop: 9, gap: 7 }}>
@@ -325,7 +359,7 @@ export function ArenaScreen() {
 
       <aside className="card side" id="rightside">
         <button className="colbtn" onClick={() => { /* collapse right */ }}>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6" /></svg>
         </button>
         <h3>Metrics</h3>
         <p className="mini">Live from the state store</p>
@@ -354,7 +388,9 @@ export function ArenaScreen() {
         <div className="sect">
           <h4>ZOPA overlap</h4>
           <ZOPAGauge value={zopaOverlap} />
-          <text x="80" y="90" textAnchor="middle" fill="#9aa9c2" fontSize="8">{prac ? 'estimated, opponents hidden' : 'deal zone overlap'}</text>
+          <p className='muted' >
+            {prac ? 'estimated, opponents hidden' : 'deal zone overlap'}
+          </p>
         </div>
         <div className="sect">
           <h4>Deadlock risk</h4>
@@ -451,11 +487,11 @@ function Seat({ agent, state, scenario, agentState, isHumanTurn, isSpeaking }: {
               <stop offset="1" stopColor={agent.color + '88'} />
             </linearGradient>
           </defs>
-          <rect x="12" y="34" width="68" height="58" rx="16" fill="#0b1426" stroke="#ffffff18"/>
-          <path d="M14 94 C14 66 28 54 46 54 C64 54 78 66 78 94 Z" fill={`url(#fg${agent.id})`}/>
-          <path d="M38 56 L46 70 L54 56" fill="#ffffff30"/>
-          <circle cx="46" cy="24" r="21" fill={agent.color} opacity="0.95"/>
-          <circle cx="46" cy="24" r="21" fill={`url(#fg${agent.id})`} opacity="0.4"/>
+          <rect x="12" y="34" width="68" height="58" rx="16" fill="#0b1426" stroke="#ffffff18" />
+          <path d="M14 94 C14 66 28 54 46 54 C64 54 78 66 78 94 Z" fill={`url(#fg${agent.id})`} />
+          <path d="M38 56 L46 70 L54 56" fill="#ffffff30" />
+          <circle cx="46" cy="24" r="21" fill={agent.color} opacity="0.95" />
+          <circle cx="46" cy="24" r="21" fill={`url(#fg${agent.id})`} opacity="0.4" />
         </svg>
         <div className="face">{face}</div>
       </div>
@@ -468,8 +504,8 @@ function Seat({ agent, state, scenario, agentState, isHumanTurn, isSpeaking }: {
         <div className="emo">
           <div className="orb"><i style={dotStyle as React.CSSProperties}></i></div>
           <svg className="spark" viewBox="0 0 64 24">
-            <line x1="0" x2="64" y1="12" y2="12" stroke="#ffffff18"/>
-            <polyline points={points} fill="none" stroke={agent.color} strokeWidth="1.8" strokeLinejoin="round"/>
+            <line x1="0" x2="64" y1="12" y2="12" stroke="#ffffff18" />
+            <polyline points={points} fill="none" stroke={agent.color} strokeWidth="1.8" strokeLinejoin="round" />
             {hist.length > 0 && <circle cx={`${(hist.length - 1) / Math.max(1, hist.length - 1) * 62 + 1}`} cy={`${12 - hist[hist.length - 1] * 10}`} r="2.5" fill={agent.color} />}
           </svg>
           <span className="mini emolbl" style={{ minWidth: 44, textAlign: 'left' }}>{label}</span>
@@ -512,10 +548,10 @@ function ZOPAGauge({ value }: { value: number }) {
   const color = value > 0.66 ? '#67d6a3' : value > 0.4 ? '#7aa7ff' : '#f4c66a';
   return (
     <svg className="gauge" viewBox="0 0 160 92" width="160">
-      <path d="M80 82 A62 62 0 0 1 80 82" stroke="#25324c" strokeWidth="12" fill="none" strokeLinecap="round"/>
-      <path d="M80 82 A62 62 0 0 1 ${x} ${y}" stroke="color" strokeWidth="12" fill="none" strokeLinecap="round"/>
-      <line x1="80" y1="82" x2={x} y2={y} stroke="#eef3ff" strokeWidth="3" strokeLinecap="round"/>
-      <circle cx="80" cy="82" r="6" fill="#eef3ff"/>
+      <path d="M80 82 A62 62 0 0 1 80 82" stroke="#25324c" strokeWidth="12" fill="none" strokeLinecap="round" />
+      <path d="M80 82 A62 62 0 0 1 ${x} ${y}" stroke="color" strokeWidth="12" fill="none" strokeLinecap="round" />
+      <line x1="80" y1="82" x2={x} y2={y} stroke="#eef3ff" strokeWidth="3" strokeLinecap="round" />
+      <circle cx="80" cy="82" r="6" fill="#eef3ff" />
       <text x="80" y="66" textAnchor="middle" fill="#eef3ff" fontSize="17" fontWeight="800">{Math.round(value * 100)}%</text>
     </svg>
   );

@@ -14,14 +14,15 @@ import type {
 import { useUIStore } from "@/stores/ui-store";
 import { useConfigStore } from "@/stores/config-store";
 import { useSessionStore } from "@/stores/session-store";
+import { useShallow } from 'zustand/react/shallow';
 
 export function useSimulation() {
   const simRef = useRef<Simulation | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Store selectors
-  const ui = useUIStore((s) => ({
+const ui = useUIStore(
+  useShallow((s) => ({
     mindReveal: s.mindReveal,
     arenaPaused: s.arenaPaused,
     arenaPlaying: s.arenaPlaying,
@@ -30,13 +31,16 @@ export function useSimulation() {
     setArenaPaused: s.setArenaPaused,
     showToast: s.showToast,
     setScreen: s.setScreen,
-  }));
+  }))
+);
 
   const config = useConfigStore((s) => s.draft);
   const buildEngineConfig = useConfigStore((s) => s.buildEngineConfig);
 
-  const session = useSessionStore((s) => ({
+ const session = useSessionStore(
+  useShallow((s) => ({
     setEngineState: s.setEngineState,
+    setTranscript: s.setTranscript,
     appendTranscript: s.appendTranscript,
     setTableOffer: s.setTableOffer,
     setConcessionLines: s.setConcessionLines,
@@ -53,13 +57,15 @@ export function useSimulation() {
     setReplayPlaying: s.setReplayPlaying,
     setReplayPerspective: s.setReplayPerspective,
     reset: s.reset,
-  }));
+  }))
+);
 
   // Initialize simulation
   const initialize = useCallback(
     async (draft?: SessionDraft) => {
       try {
         setError(null);
+        session.reset()
         const sim = createSimulation();
         simRef.current = sim;
 
@@ -166,8 +172,16 @@ export function useSimulation() {
 
         await sim.init(engineConfig);
 
+        const initialState = sim.getState();
+
+        if (initialState) {
+          session.setEngineState(initialState);
+          session.setTranscript(initialState.transcript || []);
+        }
+
         setIsInitialized(true);
         return sim;
+
       } catch (err) {
         const msg =
           err instanceof Error
@@ -182,7 +196,7 @@ export function useSimulation() {
   );
 
   // Main simulation loop
-  const runLoop = useCallback(async () => {
+  const runLoop = useCallback(async (force=false) => {
     const sim = simRef.current;
     if (!sim || !isInitialized) return;
 
@@ -205,7 +219,7 @@ export function useSimulation() {
         continue;
       }
 
-      if (!ui.arenaPlaying && !session.replayPlaying) break;
+      if (!force && !ui.arenaPlaying && !session.replayPlaying) break;
 
       const result = await sim.step();
       session.setEngineState(sim.getState());
@@ -238,7 +252,7 @@ export function useSimulation() {
       const playing = force === true ? true : !ui.arenaPlaying;
       ui.setArenaPlaying(playing);
       ui.setArenaPaused(false);
-      if (playing) runLoop();
+      if (playing) runLoop(true);
     },
     [ui, runLoop],
   );

@@ -7,6 +7,7 @@ import { useConfigStore } from '@/stores/config-store';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { SEAT_COLORS } from '@/engine/types';
+import { getScenario } from '@/engine/scenarios';
 
 interface SeatDemo {
   n: string;
@@ -121,8 +122,11 @@ export function HomeScreen() {
   const quickDemo = () => {
     const ui = useUIStore.getState();
     const config = useConfigStore.getState();
+
+    // Load the complete Vendor Pricing template.
+    config.resetToTemplate(getScenario('vendor'));
     config.setMode('simulation');
-    config.setScenario('vendor');
+
     ui.setScreen('arena');
   };
 
