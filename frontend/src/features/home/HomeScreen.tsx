@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Brain, Bot, Users, Clock, Check } from 'lucide-react';
+import { Brain, Bot, Users, Clock } from 'lucide-react';
 import { useUIStore } from '@/stores/ui-store';
 import { useConfigStore } from '@/stores/config-store';
 import { Button } from '@/components/ui/Button';
@@ -37,7 +37,6 @@ export function HomeScreen() {
 
   const heroTableRef = useRef<HTMLDivElement>(null);
   const [initialized, setInitialized] = useState(false);
-  const [animationFrame, setAnimationFrame] = useState(0);
 
   useEffect(() => {
     // Reset config when returning home
@@ -61,21 +60,25 @@ export function HomeScreen() {
     }
   }, [resetToTemplate, setAmbientEnabled, initialized]);
 
-  // Hero table animation
+  // Hero table animation (matches HTML prototype: 2300ms bubble, 2700ms turn interval)
   useEffect(() => {
-    if (!heroTableRef.current) return;
+    const container = heroTableRef.current;
+    if (!container) return;
 
     let k = 0;
+    let hideTimer: ReturnType<typeof setTimeout> | null = null;
+    let nextTimer: ReturnType<typeof setTimeout> | null = null;
+
     const tick = () => {
       const i = k % 3;
-      const seatEl = heroTableRef.current?.querySelector(`#hs${i}`);
+      const seatEl = container.querySelector(`#hs${i}`);
       if (!seatEl) return;
 
-      // Remove speaking from all
-      heroTableRef.current?.querySelectorAll('.seat').forEach(s => s.classList.remove('speaking'));
+      // Remove speaking from all seats
+      container.querySelectorAll('.seat').forEach((s) => s.classList.remove('speaking'));
       seatEl.classList.add('speaking');
 
-      // Update bubble
+      // Update speech bubble and emoji face
       const bubble = seatEl.querySelector('.bubble');
       const face = seatEl.querySelector('.face');
       if (bubble && face) {
@@ -84,10 +87,10 @@ export function HomeScreen() {
         face.textContent = demoLines[k % 4][1];
       }
 
-      // Update offer card
-      const priceEl = heroTableRef.current?.querySelector('#hp');
-      const deliveryEl = heroTableRef.current?.querySelector('#hd');
-      const offerCard = heroTableRef.current?.querySelector('#herooffer') as HTMLElement | null;
+      // Update central offer card with bump animation
+      const priceEl = container.querySelector('#hp');
+      const deliveryEl = container.querySelector('#hd');
+      const offerCard = container.querySelector('#herooffer') as HTMLElement | null;
       if (priceEl && deliveryEl && offerCard) {
         priceEl.textContent = '₹' + demoPrices[k % 4].toLocaleString('en-IN');
         deliveryEl.textContent = demoDeliveries[k % 4] + ' days';
@@ -96,16 +99,23 @@ export function HomeScreen() {
         offerCard.classList.add('bump');
       }
 
-      setTimeout(() => {
+      // Hide bubble after 2300ms
+      hideTimer = setTimeout(() => {
         if (bubble) bubble.classList.remove('show');
       }, 2300);
 
+      // Schedule next turn after 2700ms
       k++;
-      setAnimationFrame(requestAnimationFrame(tick));
+      nextTimer = setTimeout(tick, 2700);
     };
 
-    const frame = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame);
+    // Initial delay of 800ms before first turn
+    nextTimer = setTimeout(tick, 800);
+
+    return () => {
+      if (hideTimer) clearTimeout(hideTimer);
+      if (nextTimer) clearTimeout(nextTimer);
+    };
   }, []);
 
   const quickDemo = () => {
@@ -232,7 +242,6 @@ function SavedSessionsModal() {
       L.splice(i, 1);
       localStorage.setItem('na.sessions', JSON.stringify(L));
       showToast('Session deleted');
-      // Re-render by closing and reopening
       closeModal();
       setTimeout(() => openModal(<SavedSessionsModal />, true), 0);
     } catch (e) {
