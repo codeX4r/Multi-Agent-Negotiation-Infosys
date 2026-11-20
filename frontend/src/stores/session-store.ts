@@ -64,6 +64,9 @@ interface SessionState {
   forkedFrom: number | null;
   setForkedFrom: (turn: number | null) => void;
 
+  // Climate override (UI-driven during session)
+  setEngineClimate: (climate: 'stable' | 'volatile' | 'crisis') => void;
+
   // Reset
   reset: () => void;
 }
@@ -126,4 +129,12 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   setForkedFrom: (forkedFrom) => set({ forkedFrom }),
 
   reset: () => set(defaultState),
+
+  setEngineClimate: (climate) => {
+    const s = get().engineState;
+    if (!s) return;
+    // Keep in sync with CLIMATES pressure values in engine/types.ts
+    const pressureMap: Record<string, number> = { stable: 0.12, volatile: 0.32, crisis: 0.55 };
+    set({ engineState: { ...s, climate, pressure: pressureMap[climate] ?? s.pressure } });
+  },
 }));

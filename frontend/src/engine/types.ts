@@ -470,6 +470,32 @@ export interface ToneStats {
 // ============================================================================
 // Utility Functions (used by engine)
 // ============================================================================
+export function getEmotionLabel(e?: EmotionState): string {
+  if (!e) return 'neutral';
+  const { v, a } = e;
+  if (v > 0.35) return a > 0.55 ? 'excited' : 'content';
+  if (v > 0.05) return a > 0.6 ? 'eager' : 'calm';
+  if (v > -0.2) return a > 0.6 ? 'tense' : 'neutral';
+  if (v > -0.5) return a > 0.55 ? 'irritated' : 'anxious';
+  return a > 0.55 ? 'angry' : 'discouraged';
+}
+
+const EMOJI_MAP: Record<string, string> = {
+  excited: '😄',
+  content: '😊',
+  eager: '🙂',
+  calm: '😌',
+  tense: '😬',
+  neutral: '😐',
+  irritated: '😤',
+  anxious: '😟',
+  angry: '😠',
+  discouraged: '😞',
+};
+
+export function getEmotionFace(e?: EmotionState): string {
+  return EMOJI_MAP[getEmotionLabel(e)] ?? '😐';
+}
 
 export function clamp(v: number, a: number, b: number): number {
   return Math.max(a, Math.min(b, v));
