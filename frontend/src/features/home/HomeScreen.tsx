@@ -1,9 +1,11 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { Brain, Bot, Users, Clock, Check } from 'lucide-react';
+import { useEffect, useRef } from 'react';
+import { Brain, Bot, Users, Clock } from 'lucide-react';
 import { useUIStore } from '@/stores/ui-store';
 import { useConfigStore } from '@/stores/config-store';
+import { useSessionStore } from '@/stores/session-store';
+import { getScenario } from '@/engine/scenarios';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { SEAT_COLORS } from '@/engine/types';
@@ -16,111 +18,104 @@ interface SeatDemo {
 }
 
 const demoSeats: SeatDemo[] = [
-  { n: 'Buyer', c: SEAT_COLORS[0], x: 50, y: 84 },
-  { n: 'Vendor', c: SEAT_COLORS[1], x: 18, y: 26 },
+  { n: 'Buyer',   c: SEAT_COLORS[0], x: 50, y: 84 },
+  { n: 'Vendor',  c: SEAT_COLORS[1], x: 18, y: 26 },
   { n: 'Finance', c: SEAT_COLORS[2], x: 82, y: 26 },
 ];
 
 const demoLines = [
   ['Our price is ₹12,00,000 for 30-day delivery.', '😤'],
-  ['We could do ₹11.2L if delivery is 22 days?', '🙂'],
-  ['That fits the budget if payment is Net-45.', '😌'],
-  ['₹10.8L, 25 days, 12-month warranty. Deal?', '😊'],
+  ['We could do ₹11.2L if delivery is 22 days?',   '🙂'],
+  ['That fits the budget if payment is Net-45.',    '😌'],
+  ['₹10.8L, 25 days, 12-month warranty. Deal?',    '😊'],
 ];
 
-const demoPrices = [1200000, 1120000, 1120000, 1080000];
+const demoPrices    = [1200000, 1120000, 1120000, 1080000];
 const demoDeliveries = [30, 22, 22, 25];
 
 export function HomeScreen() {
   const { setScreen, setAmbientEnabled } = useUIStore();
-  const { resetToTemplate } = useConfigStore();
-
   const heroTableRef = useRef<HTMLDivElement>(null);
-  const [initialized, setInitialized] = useState(false);
-  const [animationFrame, setAnimationFrame] = useState(0);
 
+  /* ── Keep ambient on while on home ── */
   useEffect(() => {
-    // Reset config when returning home
-    resetToTemplate({
-      id: 'vendor',
-      name: 'Vendor Pricing',
-      icon: '🏭',
-      diff: 'Medium',
-      backdrop: 'tradefloor',
-      opener: 'vendor',
-      blurb: 'Buyer, supplier and finance haggle over a bulk hardware order.',
-      issues: [],
-      roles: [],
-      events: [],
-      climate: 'volatile',
-    } as any);
+    setAmbientEnabled(true);
+  }, [setAmbientEnabled]);
 
-    if (!initialized) {
-      setInitialized(true);
-      setAmbientEnabled(true);
-    }
-  }, [resetToTemplate, setAmbientEnabled, initialized]);
-
-  // Hero table animation
+  /* ── Hero table animation (unchanged — use setTimeout so it's real) ── */
   useEffect(() => {
-    if (!heroTableRef.current) return;
+    const container = heroTableRef.current;
+    if (!container) return;
 
     let k = 0;
+    let hideTimer: ReturnType<typeof setTimeout> | null = null;
+    let nextTimer: ReturnType<typeof setTimeout> | null = null;
+
     const tick = () => {
       const i = k % 3;
-      const seatEl = heroTableRef.current?.querySelector(`#hs${i}`);
+      const seatEl = container.querySelector(`#hs${i}`);
       if (!seatEl) return;
 
-      // Remove speaking from all
-      heroTableRef.current?.querySelectorAll('.seat').forEach(s => s.classList.remove('speaking'));
+      container.querySelectorAll('.seat').forEach((s) => s.classList.remove('speaking'));
       seatEl.classList.add('speaking');
 
-      // Update bubble
-      const bubble = seatEl.querySelector('.bubble');
-      const face = seatEl.querySelector('.face');
+      const bubble = seatEl.querySelector('.bubble') as HTMLElement | null;
+      const face   = seatEl.querySelector('.face')   as HTMLElement | null;
       if (bubble && face) {
         bubble.textContent = demoLines[k % 4][0];
         bubble.classList.add('show');
         face.textContent = demoLines[k % 4][1];
       }
 
-      // Update offer card
-      const priceEl = heroTableRef.current?.querySelector('#hp');
-      const deliveryEl = heroTableRef.current?.querySelector('#hd');
-      const offerCard = heroTableRef.current?.querySelector('#herooffer') as HTMLElement | null;
+      const priceEl    = container.querySelector('#hp') as HTMLElement | null;
+      const deliveryEl = container.querySelector('#hd') as HTMLElement | null;
+      const offerCard  = container.querySelector('#herooffer') as HTMLElement | null;
       if (priceEl && deliveryEl && offerCard) {
-        priceEl.textContent = '₹' + demoPrices[k % 4].toLocaleString('en-IN');
+        priceEl.textContent    = '₹' + demoPrices[k % 4].toLocaleString('en-IN');
         deliveryEl.textContent = demoDeliveries[k % 4] + ' days';
         offerCard.classList.remove('bump');
         void offerCard.offsetWidth;
         offerCard.classList.add('bump');
       }
 
-      setTimeout(() => {
+      hideTimer = setTimeout(() => {
         if (bubble) bubble.classList.remove('show');
       }, 2300);
 
       k++;
-      setAnimationFrame(requestAnimationFrame(tick));
+      nextTimer = setTimeout(tick, 2700);
     };
 
-    const frame = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame);
+    nextTimer = setTimeout(tick, 800);
+
+    return () => {
+      if (hideTimer) clearTimeout(hideTimer);
+      if (nextTimer) clearTimeout(nextTimer);
+    };
   }, []);
 
+  /* ── Quick Demo ──
+     Mirrors the prototype's quickDemo():
+       sel = { mode:'simulation', scenario:'vendor' }
+       draft = makeDraft('vendor')
+       enterArena()
+     We build the config from the vendor template, reset session, then
+     navigate to 'arena'. The ArenaScreen auto-calls initialize() on mount
+     when engineState is null, using the config we just set.
+  */
   const quickDemo = () => {
-    const ui = useUIStore.getState();
-    const config = useConfigStore.getState();
-    config.setMode('simulation');
-    config.setScenario('vendor');
-    ui.setScreen('arena');
+    const vendor = getScenario('vendor');
+    // Reset config to vendor template, simulation mode
+    useConfigStore.getState().resetToTemplate(vendor);
+    useConfigStore.getState().setMode('simulation');
+    // Clear any stale session so the ArenaScreen starts fresh
+    useSessionStore.getState().reset();
+    // Navigate — ArenaScreen will initialize the engine from config
+    useUIStore.getState().setScreen('arena');
   };
 
   const openSaved = () => {
-    useUIStore.getState().openModal(
-      <SavedSessionsModal />,
-      true
-    );
+    useUIStore.getState().openModal(<SavedSessionsModal />, true);
   };
 
   return (
@@ -133,8 +128,8 @@ export function HomeScreen() {
           </div>
           <h1 className="heading" style={{ fontSize: 40 }}>Enter the arena</h1>
           <p className="sub">
-            Set up a table of AI negotiators, each with their own goals, a private walk-away point and a personality.
-            Watch them bargain, or take one of the seats yourself.
+            Set up a table of AI negotiators, each with their own goals, a private walk-away
+            point and a personality. Watch them bargain, or take one of the seats yourself.
           </p>
           <div className="actions" style={{ marginTop: 6 }}>
             <Button className="primary" onClick={() => setScreen('mode')}>
@@ -170,6 +165,8 @@ export function HomeScreen() {
             </Card>
           </div>
         </div>
+
+        {/* ── Hero table (animated preview — no dummy engine data) ── */}
         <Card className="card herotable" ref={heroTableRef} id="herotable">
           <div className="bigtable"></div>
           <div className="offercard" id="herooffer">
@@ -213,15 +210,13 @@ export function HomeScreen() {
   );
 }
 
+/* ── Saved Sessions Modal ── */
 function SavedSessionsModal() {
   const { closeModal, openModal, showToast } = useUIStore();
 
   const getSavedSessions = () => {
-    try {
-      return JSON.parse(localStorage.getItem('na.sessions') || '[]');
-    } catch {
-      return [];
-    }
+    try { return JSON.parse(localStorage.getItem('na.sessions') || '[]'); }
+    catch { return []; }
   };
 
   const sessions = getSavedSessions();
@@ -232,26 +227,14 @@ function SavedSessionsModal() {
       L.splice(i, 1);
       localStorage.setItem('na.sessions', JSON.stringify(L));
       showToast('Session deleted');
-      // Re-render by closing and reopening
       closeModal();
       setTimeout(() => openModal(<SavedSessionsModal />, true), 0);
-    } catch (e) {
-      showToast('Could not delete');
-    }
+    } catch { showToast('Could not delete'); }
   };
 
-  const loadSaved = (i: number) => {
-    try {
-      const L = JSON.parse(localStorage.getItem('na.sessions') || '[]');
-      const s = L[i];
-      if (!s) return;
-      closeModal();
-
-      // Restore session - this would need proper engine restoration
-      showToast('Session restore not yet implemented');
-    } catch (e) {
-      showToast('Could not load session');
-    }
+  const loadSaved = (_i: number) => {
+    closeModal();
+    showToast('Session restore coming in a future milestone.');
   };
 
   return (
@@ -264,8 +247,10 @@ function SavedSessionsModal() {
             <div>
               <b>{s.title}</b>
               <div className="mini">
-                {new Date(s.at).toLocaleString()},
-                {s.S?.status === 'running' ? 'In progress, round ' + s.S.round : s.S?.status === 'deal' ? 'Deal' : 'No deal'}
+                {new Date(s.at).toLocaleString()},{' '}
+                {s.S?.status === 'running'
+                  ? 'In progress, round ' + s.S.round
+                  : s.S?.status === 'deal' ? 'Deal' : 'No deal'}
               </div>
             </div>
             <div className="row" style={{ gap: 6 }}>

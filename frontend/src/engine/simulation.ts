@@ -9,6 +9,7 @@ import type {
   SimulationState,
   TranscriptEntry,
   Agent,
+  Role,
   Scenario,
   Report
 } from './types';
@@ -179,13 +180,18 @@ export interface SessionDraft {
   roles: string[];
   autonomy: 0 | 1 | 2 | 3;
   tab?: string;
+  roleOverrides?: Record<string, Partial<Role>>;
 }
 
 export function buildEngineConfig(draft: SessionDraft): EngineConfig {
   const scenario = getScenario(draft.scenarioId);
-  const agents = draft.seats.map((rid, i) => {
-    const role = scenario.roles.find(r => r.id === rid);
-    if (!role) throw new Error(`Role not found: ${rid}`);
+  const agents: Agent[] = draft.seats.map((rid, i) => {
+    const baseRole = scenario.roles.find(r => r.id === rid);
+    if (!baseRole) throw new Error(`Role not found: ${rid}`);
+    const role: Role = {
+      ...baseRole,
+      ...(draft.roleOverrides?.[rid] || {})
+    };
     const w = Object.fromEntries(
       Object.entries(role.prefs).map(([k, p]) => [k, p.w])
     );

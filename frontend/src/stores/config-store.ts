@@ -21,6 +21,7 @@ interface ConfigDraft {
   customIssues: Issue[];
   customRoles: Role[];
   customEvents: Event[];
+  roleOverrides: Record<string, Partial<Role>>;
 }
 
 const defaultDraft: ConfigDraft = {
@@ -39,6 +40,7 @@ const defaultDraft: ConfigDraft = {
   customIssues: [],
   customRoles: [],
   customEvents: [],
+  roleOverrides: {},
 };
 
 interface ConfigState {
@@ -121,15 +123,17 @@ export const useConfigStore = create<ConfigState>()(
 
       updateRole: (roleId, patch) => {
         set((state) => {
-          const scenarioId = state.draft.scenarioId;
-          // This is used in the builder tab for custom scenarios
-          if (state.draft.tab === 'builder') {
-            const customRoles = state.draft.customRoles.map((r) =>
-              r.id === roleId ? { ...r, ...patch } : r
-            );
-            return { draft: { ...state.draft, customRoles } };
-          }
-          return state;
+          const roleOverrides = {
+            ...state.draft.roleOverrides,
+            [roleId]: {
+              ...state.draft.roleOverrides?.[roleId],
+              ...patch,
+            },
+          };
+          const customRoles = state.draft.customRoles.map((r) =>
+            r.id === roleId ? { ...r, ...patch } : r
+          );
+          return { draft: { ...state.draft, roleOverrides, customRoles } };
         });
       },
 
@@ -214,6 +218,7 @@ export const useConfigStore = create<ConfigState>()(
             customIssues: isCustom ? scenario.issues : [],
             customRoles: isCustom ? scenario.roles : [],
             customEvents: isCustom ? scenario.events : [],
+            roleOverrides: {},
           },
         }));
       },
@@ -245,6 +250,7 @@ export const useConfigStore = create<ConfigState>()(
           roles: draft.roles,
           autonomy: draft.autonomy,
           tab: draft.tab,
+          roleOverrides: draft.roleOverrides,
         });
       },
     }),

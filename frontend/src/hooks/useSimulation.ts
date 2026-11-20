@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useCallback, useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 import {
   createSimulation,
   type Simulation,
@@ -15,45 +16,53 @@ import { useUIStore } from "@/stores/ui-store";
 import { useConfigStore } from "@/stores/config-store";
 import { useSessionStore } from "@/stores/session-store";
 
+let activeSim: Simulation | null = null;
+
 export function useSimulation() {
-  const simRef = useRef<Simulation | null>(null);
+  const simRef = useRef<Simulation | null>(activeSim);
+  const isLoopingRef = useRef(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Store selectors
-  const ui = useUIStore((s) => ({
-    mindReveal: s.mindReveal,
-    arenaPaused: s.arenaPaused,
-    arenaPlaying: s.arenaPlaying,
-    simulationSpeed: s.simulationSpeed,
-    setArenaPlaying: s.setArenaPlaying,
-    setArenaPaused: s.setArenaPaused,
-    showToast: s.showToast,
-    setScreen: s.setScreen,
-  }));
+  // Store selectors (using useShallow to prevent infinite loops)
+  const ui = useUIStore(
+    useShallow((s) => ({
+      mindReveal: s.mindReveal,
+      arenaPaused: s.arenaPaused,
+      arenaPlaying: s.arenaPlaying,
+      simulationSpeed: s.simulationSpeed,
+      setArenaPlaying: s.setArenaPlaying,
+      setArenaPaused: s.setArenaPaused,
+      showToast: s.showToast,
+      setScreen: s.setScreen,
+    }))
+  );
 
   const config = useConfigStore((s) => s.draft);
   const buildEngineConfig = useConfigStore((s) => s.buildEngineConfig);
 
-  const session = useSessionStore((s) => ({
-    setEngineState: s.setEngineState,
-    appendTranscript: s.appendTranscript,
-    setTableOffer: s.setTableOffer,
-    setConcessionLines: s.setConcessionLines,
-    setStanceBars: s.setStanceBars,
-    setZopaOverlap: s.setZopaOverlap,
-    setDeadlockRisk: s.setDeadlockRisk,
-    setDeadlockStalled: s.setDeadlockStalled,
-    setAgreementLikelihood: s.setAgreementLikelihood,
-    updateAgentState: s.updateAgentState,
-    setInnerVoiceText: s.setInnerVoiceText,
-    setCurrentSpeaker: s.setCurrentSpeaker,
-    replayPlaying: s.replayPlaying,
-    setReplayTurn: s.setReplayTurn,
-    setReplayPlaying: s.setReplayPlaying,
-    setReplayPerspective: s.setReplayPerspective,
-    reset: s.reset,
-  }));
+  const session = useSessionStore(
+    useShallow((s) => ({
+      setEngineState: s.setEngineState,
+      appendTranscript: s.appendTranscript,
+      setTranscript: s.setTranscript,
+      setTableOffer: s.setTableOffer,
+      setConcessionLines: s.setConcessionLines,
+      setStanceBars: s.setStanceBars,
+      setZopaOverlap: s.setZopaOverlap,
+      setDeadlockRisk: s.setDeadlockRisk,
+      setDeadlockStalled: s.setDeadlockStalled,
+      setAgreementLikelihood: s.setAgreementLikelihood,
+      updateAgentState: s.updateAgentState,
+      setInnerVoiceText: s.setInnerVoiceText,
+      setCurrentSpeaker: s.setCurrentSpeaker,
+      replayPlaying: s.replayPlaying,
+      setReplayTurn: s.setReplayTurn,
+      setReplayPlaying: s.setReplayPlaying,
+      setReplayPerspective: s.setReplayPerspective,
+      reset: s.reset,
+    }))
+  );
 
   // Initialize simulation
   const initialize = useCallback(
@@ -61,22 +70,24 @@ export function useSimulation() {
       try {
         setError(null);
         const sim = createSimulation();
+        activeSim = sim;
         simRef.current = sim;
 
         // Convert config draft to SessionDraft for buildEngineConfig
-        const configDraft = config;
+        const configDraft = useConfigStore.getState().draft;
         const sessionDraft: SessionDraft = {
-          scenarioId: configDraft.scenarioId!,
-          mode: configDraft.mode!,
-          seats: configDraft.seats,
+          scenarioId: configDraft.scenarioId || 'vendor',
+          mode: configDraft.mode || 'simulation',
+          seats: configDraft.seats && configDraft.seats.length ? configDraft.seats : ['buyer', 'vendor', 'finance'],
           human: configDraft.human,
-          climate: configDraft.climate,
-          eventFreq: configDraft.eventFreq,
-          rounds: configDraft.rounds,
-          deadlockN: configDraft.deadlockN,
-          backdrop: configDraft.backdrop,
-          roles: configDraft.roles,
-          autonomy: configDraft.autonomy,
+          climate: configDraft.climate || 'volatile',
+          eventFreq: configDraft.eventFreq ?? 2,
+          rounds: configDraft.rounds || 12,
+          deadlockN: configDraft.deadlockN || 3,
+          backdrop: configDraft.backdrop || 'tradefloor',
+          roles: configDraft.roles || ['timekeeper', 'mediator', 'enforcer', 'injector', 'auditor'],
+          autonomy: configDraft.autonomy ?? 2,
+          roleOverrides: configDraft.roleOverrides,
         };
 
         const engineConfig = buildEngineConfig(draft || sessionDraft);
@@ -89,15 +100,38 @@ export function useSimulation() {
           onThinking: async (agent: Agent) => {
             session.setCurrentSpeaker(agent.id);
             session.updateAgentState(agent.id, { lastDecision: "thinking" });
-            // Small delay for thinking animation
-            await new Promise((r) => setTimeout(r, 300 / ui.simulationSpeed));
+            const seatEl = document.getElementById(`seat-${agent.id}`);
+            const bubble = seatEl?.querySelector('.bubble');
+            if (seatEl && bubble) {
+              seatEl.classList.add('speaking');
+              bubble.className = 'bubble typing show';
+              bubble.innerHTML = '<b></b><b></b><b></b>';
+            }
+            const speed = useUIStore.getState().simulationSpeed;
+            await new Promise((r) => setTimeout(r, 300 / (speed || 1)));
+            if (bubble) {
+              bubble.classList.remove('show', 'typing');
+            }
           },
           onTurn: (entry: TranscriptEntry) => {
             session.appendTranscript(entry);
 
-            // Update current speaker
+            // Update current speaker and show bubble
             if (entry.by !== "orchestrator") {
               session.setCurrentSpeaker(entry.by);
+              const seatEl = document.getElementById(`seat-${entry.by}`);
+              const bubble = seatEl?.querySelector('.bubble');
+              if (seatEl && bubble) {
+                document.querySelectorAll('.seat').forEach(s => s.classList.remove('speaking', 'waiting'));
+                seatEl.classList.add('speaking');
+                bubble.className = 'bubble show';
+                bubble.textContent = entry.text && entry.text.length > 120 ? entry.text.slice(0, 117) + '…' : (entry.text || '');
+                const speed = useUIStore.getState().simulationSpeed;
+                setTimeout(() => {
+                  bubble.classList.remove('show');
+                  seatEl.classList.remove('speaking');
+                }, 2600 / Math.min(2, speed || 1));
+              }
             }
 
             // Update table offer
@@ -112,7 +146,8 @@ export function useSimulation() {
 
             // Update agent state
             if (entry.by !== "orchestrator") {
-              const agent = simRef.current
+              const currentSim = simRef.current || activeSim;
+              const agent = currentSim
                 ?.getState()
                 ?.agents.find((candidate) => candidate.id === entry.by);
               if (agent) {
@@ -124,13 +159,15 @@ export function useSimulation() {
             }
 
             // Update metrics
-            const state = simRef.current?.getState();
+            const currentSim = simRef.current || activeSim;
+            const state = currentSim?.getState();
             if (state) {
               session.setEngineState(state);
             }
           },
           onUpdate: () => {
-            const state = simRef.current?.getState();
+            const currentSim = simRef.current || activeSim;
+            const state = currentSim?.getState();
             if (state) {
               session.setEngineState(state);
             }
@@ -145,10 +182,10 @@ export function useSimulation() {
             }, 60);
           },
           onModal: async () => {
-            // This will be handled by UI modals
             return "extend";
           },
           onEnd: (status: "deal" | "breakdown" | "running") => {
+            useUIStore.getState().setArenaPlaying(false);
             if (status === "deal") {
               ui.showToast("Deal reached! Opening the outcome report...");
               setTimeout(() => {
@@ -165,6 +202,21 @@ export function useSimulation() {
         });
 
         await sim.init(engineConfig);
+        activeSim = sim;
+        simRef.current = sim;
+
+        const initialState = sim.getState();
+        if (initialState) {
+          session.setEngineState(initialState);
+          session.setTranscript([]);
+          session.setTableOffer(null);
+          session.setCurrentSpeaker(null);
+          session.setInnerVoiceText(
+            engineConfig.mode === 'simulation'
+              ? 'Press Play or the space bar to start. Notes on each move will appear here.'
+              : 'Coaching notes appear here. Press Hint whenever you want one.'
+          );
+        }
 
         setIsInitialized(true);
         return sim;
@@ -178,97 +230,109 @@ export function useSimulation() {
         throw err;
       }
     },
-    [ui, session, config, buildEngineConfig],
+    [ui, session, buildEngineConfig],
   );
 
   // Main simulation loop
   const runLoop = useCallback(async () => {
-    const sim = simRef.current;
-    if (!sim || !isInitialized) return;
+    const sim = simRef.current || activeSim;
+    if (!sim || !sim.getState()) return;
+    if (isLoopingRef.current) return;
+    isLoopingRef.current = true;
 
-    let loopCount = 0;
-    const maxLoops = 100; // Safety limit
+    try {
+      let loopCount = 0;
+      const maxLoops = 200;
 
-    while (loopCount < maxLoops) {
-      const state = sim.getState();
-      if (
-        !state ||
-        state.status !== "running" ||
-        state.waitingHuman ||
-        state.blocked
-      ) {
-        break;
+      while (loopCount < maxLoops) {
+        const state = sim.getState();
+        if (
+          !state ||
+          state.status !== "running" ||
+          state.waitingHuman ||
+          state.blocked
+        ) {
+          break;
+        }
+
+        const currentUI = useUIStore.getState();
+        if (currentUI.arenaPaused) {
+          await new Promise((r) => setTimeout(r, 150));
+          continue;
+        }
+
+        if (!currentUI.arenaPlaying && !useSessionStore.getState().replayPlaying) {
+          break;
+        }
+
+        const result = await sim.step();
+        session.setEngineState(sim.getState());
+
+        if (!result) break;
+
+        // Delay between steps
+        const speed = useUIStore.getState().simulationSpeed;
+        const delay = speed > 0 ? 260 / speed : 120;
+        await new Promise((r) => setTimeout(r, delay));
+
+        loopCount++;
       }
-
-      if (ui.arenaPaused) {
-        await new Promise((r) => setTimeout(r, 150));
-        continue;
+    } finally {
+      isLoopingRef.current = false;
+      const finalState = sim.getState();
+      if (!finalState || finalState.status !== "running") {
+        useUIStore.getState().setArenaPlaying(false);
       }
-
-      if (!ui.arenaPlaying && !session.replayPlaying) break;
-
-      const result = await sim.step();
-      session.setEngineState(sim.getState());
-
-      if (!result) break;
-
-      // Delay between steps
-      const delay = ui.simulationSpeed > 0 ? 260 / ui.simulationSpeed : 120;
-      await new Promise((r) => setTimeout(r, delay));
-
-      loopCount++;
     }
-  }, [
-    isInitialized,
-    ui.arenaPaused,
-    ui.arenaPlaying,
-    ui.simulationSpeed,
-    session,
-  ]);
+  }, [session]);
 
   // Toggle play/pause
   const togglePlay = useCallback(
     (force?: boolean) => {
-      const sim = simRef.current;
+      const sim = simRef.current || activeSim;
       const state = sim?.getState();
       if (!state || state.status !== "running") {
         ui.showToast("Session finished, open the outcome report.");
         return;
       }
-      const playing = force === true ? true : !ui.arenaPlaying;
-      ui.setArenaPlaying(playing);
-      ui.setArenaPaused(false);
-      if (playing) runLoop();
+      const currentlyPlaying = useUIStore.getState().arenaPlaying;
+      const playing = force === true ? true : !currentlyPlaying;
+      useUIStore.getState().setArenaPlaying(playing);
+      useUIStore.getState().setArenaPaused(false);
+      if (playing) {
+        runLoop();
+      }
     },
     [ui, runLoop],
   );
 
   const stepOnce = useCallback(async () => {
-    const sim = simRef.current;
+    const sim = simRef.current || activeSim;
     const state = sim?.getState();
     if (!state || state.status !== "running") return;
-    ui.setArenaPlaying(false);
-    ui.setArenaPaused(false);
+    useUIStore.getState().setArenaPlaying(false);
+    useUIStore.getState().setArenaPaused(false);
     if (!sim) return;
     await sim.step();
     session.setEngineState(sim.getState());
-  }, [ui, session]);
+  }, [session]);
 
   const togglePause = useCallback(() => {
+    const sim = simRef.current || activeSim;
     if (
-      !simRef.current?.getState() ||
-      simRef.current?.getState()?.status !== "running"
+      !sim?.getState() ||
+      sim.getState()?.status !== "running"
     )
       return;
-    const paused = !ui.arenaPaused;
-    ui.setArenaPaused(paused);
-    ui.setArenaPlaying(false);
+    const paused = !useUIStore.getState().arenaPaused;
+    useUIStore.getState().setArenaPaused(paused);
+    useUIStore.getState().setArenaPlaying(false);
     ui.showToast(paused ? "Paused, the turn timer is frozen." : "Resumed.");
   }, [ui]);
 
   const handleSend = useCallback(
     async (text: string, x?: Record<string, number>) => {
-      const sim = simRef.current;
+      const sim = simRef.current || activeSim;
       if (!sim) return { err: "Not initialized" };
 
       // Classify tone if text provided
@@ -290,7 +354,7 @@ export function useSimulation() {
 
   const acceptOffer = useCallback(
     async (text?: string) => {
-      const sim = simRef.current;
+      const sim = simRef.current || activeSim;
       if (!sim) return { err: "Not initialized" };
       const result = sim.humanAct({ type: "accept", text });
       session.setEngineState(sim.getState());
@@ -301,7 +365,7 @@ export function useSimulation() {
 
   const walkAway = useCallback(
     async (text?: string) => {
-      const sim = simRef.current;
+      const sim = simRef.current || activeSim;
       if (!sim) return { err: "Not initialized" };
       const result = sim.humanAct({ type: "walk", text });
       session.setEngineState(sim.getState());
@@ -311,14 +375,14 @@ export function useSimulation() {
   );
 
   const suggestConcession = useCallback(() => {
-    const sim = simRef.current;
+    const sim = simRef.current || activeSim;
     if (!sim) return null;
     const x = sim.suggestConcession();
     return x;
   }, []);
 
   const getCoachHints = useCallback(() => {
-    const sim = simRef.current;
+    const sim = simRef.current || activeSim;
     if (!sim) return [];
     return sim.coach();
   }, []);

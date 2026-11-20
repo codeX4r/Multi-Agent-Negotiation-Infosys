@@ -212,8 +212,9 @@ export function SetupScreen() {
           <div className="minitable">
             <div className="tbl"></div>
             {draft.seats.map((rid, i) => {
-              const r = scenario?.roles.find((role: Role) => role.id === rid);
-              if (!r) return null;
+              const rRaw = scenario?.roles.find((role: Role) => role.id === rid);
+              if (!rRaw) return null;
+              const r = { ...rRaw, ...(draft.roleOverrides?.[rid] || {}) };
               const P = PERSONALITIES[r.personality];
               const pos = seatPositions[i];
               return (
@@ -287,22 +288,23 @@ export function SetupScreen() {
 
           <div className="lbl" style={{ marginTop: 14 }}>Quick personality per seat</div>
           {draft.seats.map((rid, i) => {
-            const r = scenario?.roles.find((role: Role) => role.id === rid);
-            if (!r) return null;
+            const rRaw = scenario?.roles.find((role: Role) => role.id === rid);
+            if (!rRaw) return null;
+            const r = { ...rRaw, ...(draft.roleOverrides?.[rid] || {}) };
             return (
               <div key={rid} className="row between" style={{ margin: '7px 0' }}>
                 <span style={{ fontSize: 12, fontWeight: 700, minWidth: 70 }}>
-                  {r.name}{draft.human === i ? ' <span className="mini">(you)</span>' : ''}
+                  {r.name} {draft.human === i && <span className="mini">(you)</span>}
                 </span>
                 <Segmented
                   options={Object.entries(PERSONALITIES).map(([k, p]) => ({ value: k, label: p.label.slice(0, 4) }))}
                   value={r.personality}
-                  onChange={(v) => { if (r) { r.personality = v as any; }}}
+                  onChange={(v) => updateRole(rid, { personality: v as any })}
                 />
                 <Segmented
                   options={Object.entries(SKILLS).map(([k, l]) => ({ value: k, label: l[0] }))}
                   value={r.skill}
-                  onChange={(v) => { if (r) { r.skill = v as any; }}}
+                  onChange={(v) => updateRole(rid, { skill: v as any })}
                 />
               </div>
             );
@@ -448,7 +450,7 @@ export function SetupScreen() {
             <li>Pass history + state to the agent</li>
             <li>Collect move (AI reasoning or your input)</li>
             <li>Update state store: offers, trust, emotions</li>
-            <li>Check events + deadlock {draft.autonomy >= 2 ? '✓' : '<span style={{ color: "var(--amber)" }}>(limited at this level)</span>'}</li>
+            <li>Check events + deadlock {draft.autonomy >= 2 ? '✓' : <span style={{ color: "var(--amber)" }}>(limited at this level)</span>}</li>
             <li>End check: deal, round limit, walk-away</li>
           </ol>
         </Card>
