@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Brain, Bot, Users, Clock } from 'lucide-react';
 import { useUIStore } from '@/stores/ui-store';
 import { useConfigStore } from '@/stores/config-store';
@@ -9,6 +9,7 @@ import { getScenario } from '@/engine/scenarios';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { SEAT_COLORS } from '@/engine/types';
+import { getScenario } from '@/engine/scenarios';
 
 interface SeatDemo {
   n: string;
@@ -36,13 +37,14 @@ const demoDeliveries = [30, 22, 22, 25];
 export function HomeScreen() {
   const { setScreen, setAmbientEnabled } = useUIStore();
   const heroTableRef = useRef<HTMLDivElement>(null);
+  const [initialized, setInitialized] = useState(false);
 
   /* ── Keep ambient on while on home ── */
   useEffect(() => {
     setAmbientEnabled(true);
   }, [setAmbientEnabled]);
 
-  /* ── Hero table animation (unchanged — use setTimeout so it's real) ── */
+  // Hero table animation (matches HTML prototype: 2300ms bubble, 2700ms turn interval)
   useEffect(() => {
     const container = heroTableRef.current;
     if (!container) return;
@@ -56,20 +58,23 @@ export function HomeScreen() {
       const seatEl = container.querySelector(`#hs${i}`);
       if (!seatEl) return;
 
+      // Remove speaking from all seats
       container.querySelectorAll('.seat').forEach((s) => s.classList.remove('speaking'));
       seatEl.classList.add('speaking');
 
-      const bubble = seatEl.querySelector('.bubble') as HTMLElement | null;
-      const face   = seatEl.querySelector('.face')   as HTMLElement | null;
+      // Update speech bubble and emoji face
+      const bubble = seatEl.querySelector('.bubble');
+      const face = seatEl.querySelector('.face');
       if (bubble && face) {
         bubble.textContent = demoLines[k % 4][0];
         bubble.classList.add('show');
         face.textContent = demoLines[k % 4][1];
       }
 
-      const priceEl    = container.querySelector('#hp') as HTMLElement | null;
-      const deliveryEl = container.querySelector('#hd') as HTMLElement | null;
-      const offerCard  = container.querySelector('#herooffer') as HTMLElement | null;
+      // Update central offer card with bump animation
+      const priceEl = container.querySelector('#hp');
+      const deliveryEl = container.querySelector('#hd');
+      const offerCard = container.querySelector('#herooffer') as HTMLElement | null;
       if (priceEl && deliveryEl && offerCard) {
         priceEl.textContent    = '₹' + demoPrices[k % 4].toLocaleString('en-IN');
         deliveryEl.textContent = demoDeliveries[k % 4] + ' days';
@@ -78,14 +83,17 @@ export function HomeScreen() {
         offerCard.classList.add('bump');
       }
 
+      // Hide bubble after 2300ms
       hideTimer = setTimeout(() => {
         if (bubble) bubble.classList.remove('show');
       }, 2300);
 
+      // Schedule next turn after 2700ms
       k++;
       nextTimer = setTimeout(tick, 2700);
     };
 
+    // Initial delay of 800ms before first turn
     nextTimer = setTimeout(tick, 800);
 
     return () => {
@@ -104,14 +112,14 @@ export function HomeScreen() {
      when engineState is null, using the config we just set.
   */
   const quickDemo = () => {
-    const vendor = getScenario('vendor');
-    // Reset config to vendor template, simulation mode
-    useConfigStore.getState().resetToTemplate(vendor);
-    useConfigStore.getState().setMode('simulation');
-    // Clear any stale session so the ArenaScreen starts fresh
-    useSessionStore.getState().reset();
-    // Navigate — ArenaScreen will initialize the engine from config
-    useUIStore.getState().setScreen('arena');
+    const ui = useUIStore.getState();
+    const config = useConfigStore.getState();
+
+    // Load the complete Vendor Pricing template.
+    config.resetToTemplate(getScenario('vendor'));
+    config.setMode('simulation');
+
+    ui.setScreen('arena');
   };
 
   const openSaved = () => {

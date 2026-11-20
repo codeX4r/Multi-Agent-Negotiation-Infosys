@@ -15,6 +15,7 @@ import type {
 import { useUIStore } from "@/stores/ui-store";
 import { useConfigStore } from "@/stores/config-store";
 import { useSessionStore } from "@/stores/session-store";
+import { useShallow } from 'zustand/react/shallow';
 
 let activeSim: Simulation | null = null;
 
@@ -24,51 +25,51 @@ export function useSimulation() {
   const [isInitialized, setIsInitialized] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Store selectors (using useShallow to prevent infinite loops)
-  const ui = useUIStore(
-    useShallow((s) => ({
-      mindReveal: s.mindReveal,
-      arenaPaused: s.arenaPaused,
-      arenaPlaying: s.arenaPlaying,
-      simulationSpeed: s.simulationSpeed,
-      setArenaPlaying: s.setArenaPlaying,
-      setArenaPaused: s.setArenaPaused,
-      showToast: s.showToast,
-      setScreen: s.setScreen,
-    }))
-  );
+const ui = useUIStore(
+  useShallow((s) => ({
+    mindReveal: s.mindReveal,
+    arenaPaused: s.arenaPaused,
+    arenaPlaying: s.arenaPlaying,
+    simulationSpeed: s.simulationSpeed,
+    setArenaPlaying: s.setArenaPlaying,
+    setArenaPaused: s.setArenaPaused,
+    showToast: s.showToast,
+    setScreen: s.setScreen,
+  }))
+);
 
   const config = useConfigStore((s) => s.draft);
   const buildEngineConfig = useConfigStore((s) => s.buildEngineConfig);
 
-  const session = useSessionStore(
-    useShallow((s) => ({
-      setEngineState: s.setEngineState,
-      appendTranscript: s.appendTranscript,
-      setTranscript: s.setTranscript,
-      setTableOffer: s.setTableOffer,
-      setConcessionLines: s.setConcessionLines,
-      setStanceBars: s.setStanceBars,
-      setZopaOverlap: s.setZopaOverlap,
-      setDeadlockRisk: s.setDeadlockRisk,
-      setDeadlockStalled: s.setDeadlockStalled,
-      setAgreementLikelihood: s.setAgreementLikelihood,
-      updateAgentState: s.updateAgentState,
-      setInnerVoiceText: s.setInnerVoiceText,
-      setCurrentSpeaker: s.setCurrentSpeaker,
-      replayPlaying: s.replayPlaying,
-      setReplayTurn: s.setReplayTurn,
-      setReplayPlaying: s.setReplayPlaying,
-      setReplayPerspective: s.setReplayPerspective,
-      reset: s.reset,
-    }))
-  );
+ const session = useSessionStore(
+  useShallow((s) => ({
+    setEngineState: s.setEngineState,
+    setTranscript: s.setTranscript,
+    appendTranscript: s.appendTranscript,
+    setTableOffer: s.setTableOffer,
+    setConcessionLines: s.setConcessionLines,
+    setStanceBars: s.setStanceBars,
+    setZopaOverlap: s.setZopaOverlap,
+    setDeadlockRisk: s.setDeadlockRisk,
+    setDeadlockStalled: s.setDeadlockStalled,
+    setAgreementLikelihood: s.setAgreementLikelihood,
+    updateAgentState: s.updateAgentState,
+    setInnerVoiceText: s.setInnerVoiceText,
+    setCurrentSpeaker: s.setCurrentSpeaker,
+    replayPlaying: s.replayPlaying,
+    setReplayTurn: s.setReplayTurn,
+    setReplayPlaying: s.setReplayPlaying,
+    setReplayPerspective: s.setReplayPerspective,
+    reset: s.reset,
+  }))
+);
 
   // Initialize simulation
   const initialize = useCallback(
     async (draft?: SessionDraft) => {
       try {
         setError(null);
+        session.reset()
         const sim = createSimulation();
         activeSim = sim;
         simRef.current = sim;
@@ -218,8 +219,16 @@ export function useSimulation() {
           );
         }
 
+        const initialState = sim.getState();
+
+        if (initialState) {
+          session.setEngineState(initialState);
+          session.setTranscript(initialState.transcript || []);
+        }
+
         setIsInitialized(true);
         return sim;
+
       } catch (err) {
         const msg =
           err instanceof Error
@@ -234,26 +243,23 @@ export function useSimulation() {
   );
 
   // Main simulation loop
-  const runLoop = useCallback(async () => {
-    const sim = simRef.current || activeSim;
-    if (!sim || !sim.getState()) return;
-    if (isLoopingRef.current) return;
-    isLoopingRef.current = true;
+  const runLoop = useCallback(async (force=false) => {
+    const sim = simRef.current;
+    if (!sim || !isInitialized) return;
 
-    try {
-      let loopCount = 0;
-      const maxLoops = 200;
+    let loopCount = 0;
+    const maxLoops = 100; // Safety limit
 
-      while (loopCount < maxLoops) {
-        const state = sim.getState();
-        if (
-          !state ||
-          state.status !== "running" ||
-          state.waitingHuman ||
-          state.blocked
-        ) {
-          break;
-        }
+    while (loopCount < maxLoops) {
+      const state = sim.getState();
+      if (
+        !state ||
+        state.status !== "running" ||
+        state.waitingHuman ||
+        state.blocked
+      ) {
+        break;
+      }
 
         const currentUI = useUIStore.getState();
         if (currentUI.arenaPaused) {
@@ -261,9 +267,7 @@ export function useSimulation() {
           continue;
         }
 
-        if (!currentUI.arenaPlaying && !useSessionStore.getState().replayPlaying) {
-          break;
-        }
+      if (!force && !ui.arenaPlaying && !session.replayPlaying) break;
 
         const result = await sim.step();
         session.setEngineState(sim.getState());
@@ -295,13 +299,10 @@ export function useSimulation() {
         ui.showToast("Session finished, open the outcome report.");
         return;
       }
-      const currentlyPlaying = useUIStore.getState().arenaPlaying;
-      const playing = force === true ? true : !currentlyPlaying;
-      useUIStore.getState().setArenaPlaying(playing);
-      useUIStore.getState().setArenaPaused(false);
-      if (playing) {
-        runLoop();
-      }
+      const playing = force === true ? true : !ui.arenaPlaying;
+      ui.setArenaPlaying(playing);
+      ui.setArenaPaused(false);
+      if (playing) runLoop(true);
     },
     [ui, runLoop],
   );
