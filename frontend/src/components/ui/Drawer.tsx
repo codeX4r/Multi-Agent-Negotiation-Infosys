@@ -13,22 +13,25 @@ export interface DrawerProps {
 export function Drawer({ id, children, className = '' }: DrawerProps) {
   const { drawer, closeDrawer } = useUIStore();
 
-  if (!drawer?.isOpen || drawer.id !== id) return null;
+  const isOpen = drawer?.isOpen === true && drawer.id === id;
 
-  const handleKeyDown = (e: KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      closeDrawer();
-    }
-  };
-
+  // ⚠️ ALL hooks must be called unconditionally before any early return
   useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeDrawer();
+    };
+
     document.addEventListener('keydown', handleKeyDown);
     document.body.style.overflow = 'hidden';
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
       document.body.style.overflow = '';
     };
-  }, []);
+  }, [isOpen, closeDrawer]);
+
+  if (!isOpen) return null;
 
   const drawerContent = (
     <div className={`drawer show ${className}`} style={{ width: 'min(400px, 94vw)' }}>
