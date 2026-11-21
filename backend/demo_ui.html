@@ -1,0 +1,416 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b1020">
+  <title>Negotiation Arena · Live Demo</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0b1020;
+      --panel: #131b2e;
+      --panel-2: #19243a;
+      --line: #2b3853;
+      --text: #eef3ff;
+      --muted: #9aa9c2;
+      --blue: #7aa7ff;
+      --cyan: #6ee7e0;
+      --green: #67d6a3;
+      --amber: #f4c66a;
+      --red: #f08b91;
+      --violet: #b69cff;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      min-height: 100vh;
+      margin: 0;
+      color: var(--text);
+      background:
+        radial-gradient(ellipse at 14% 0%, #1b2b4a 0, transparent 38%),
+        radial-gradient(ellipse at 90% 15%, #20234a 0, transparent 32%),
+        var(--bg);
+      font: 14px/1.5 Inter, system-ui, "Segoe UI", Arial, sans-serif;
+    }
+    button, select { font: inherit; }
+    button:focus-visible, select:focus-visible {
+      outline: 2px solid var(--cyan);
+      outline-offset: 3px;
+    }
+    .app { width: min(1120px, 100% - 40px); margin: 0 auto; padding: 28px 0 56px; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 48px; }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .logo {
+      display: grid;
+      width: 42px;
+      height: 42px;
+      place-items: center;
+      border-radius: 14px;
+      color: #07111e;
+      background: linear-gradient(135deg, var(--blue), var(--cyan));
+      font-size: 21px;
+      font-weight: 900;
+      box-shadow: 0 8px 26px #6ee7e033;
+    }
+    .brand strong { display: block; font-size: 15px; letter-spacing: .2px; }
+    .brand small { color: var(--muted); font-size: 12px; }
+    .status, .tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 6px 10px;
+      color: var(--muted);
+      background: #10192aab;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 12px #67d6a399; }
+    .intro { max-width: 720px; margin-bottom: 26px; }
+    .eyebrow { color: var(--cyan); font-size: 11px; font-weight: 800; letter-spacing: 1.7px; text-transform: uppercase; }
+    h1 { margin: 8px 0 10px; font-size: clamp(30px, 5vw, 46px); line-height: 1.08; letter-spacing: -1.5px; }
+    .intro p { max-width: 620px; margin: 0; color: var(--muted); font-size: 15px; }
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: linear-gradient(155deg, #18243aee, #111a2deb 70%);
+      box-shadow: 0 20px 55px #0003;
+      backdrop-filter: blur(12px);
+    }
+    .setup { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 26px; padding: 24px; }
+    .section-title { display: flex; align-items: center; gap: 11px; margin-bottom: 18px; }
+    .step {
+      display: grid;
+      width: 27px;
+      height: 27px;
+      place-items: center;
+      border-radius: 9px;
+      color: #07111e;
+      background: var(--cyan);
+      font-size: 12px;
+      font-weight: 900;
+    }
+    .section-title h2 { margin: 0; font-size: 15px; }
+    .section-title p { margin: 2px 0 0; color: var(--muted); font-size: 12px; }
+    .fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+    .field label { display: block; margin: 0 0 7px; color: var(--muted); font-size: 11px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase; }
+    .field select {
+      width: 100%;
+      min-height: 44px;
+      padding: 10px 34px 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      color: var(--text);
+      background: #0d1628;
+      cursor: pointer;
+    }
+    .scenario-note {
+      margin-top: 15px;
+      padding: 11px 13px;
+      border: 1px solid #334463;
+      border-radius: 10px;
+      color: #bfcee5;
+      background: #101a2d;
+      font-size: 12px;
+    }
+    .scenario-note strong { color: var(--blue); }
+    .setup-side {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 17px;
+      border: 1px solid #2b3955;
+      border-radius: 13px;
+      background: #0e1728a8;
+    }
+    .side-label { color: var(--muted); font-size: 11px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; }
+    .agent-pair { display: grid; gap: 9px; margin-top: 12px; }
+    .agent-chip { display: flex; align-items: center; gap: 9px; font-size: 12px; font-weight: 700; }
+    .avatar { display: grid; width: 29px; height: 29px; place-items: center; border-radius: 9px; background: #1c3156; color: var(--blue); font-size: 12px; }
+    .avatar.second { color: var(--violet); background: #30294c; }
+    .agent-chip small { display: block; color: var(--muted); font-size: 10px; font-weight: 500; }
+    .run {
+      width: 100%;
+      min-height: 43px;
+      border: 0;
+      border-radius: 10px;
+      color: white;
+      background: linear-gradient(135deg, #4778e8, #625be7);
+      box-shadow: 0 8px 24px #4778e844;
+      cursor: pointer;
+      font-weight: 800;
+      transition: transform .15s, box-shadow .2s, opacity .2s;
+    }
+    .run:hover { transform: translateY(-1px); box-shadow: 0 10px 30px #4778e877; }
+    .run:disabled { cursor: wait; opacity: .7; transform: none; }
+    .run-hint { color: var(--muted); font-size: 10px; text-align: center; }
+    .results { margin-top: 34px; }
+    .results-head { display: flex; align-items: end; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+    .results-head h2 { margin: 5px 0 0; font-size: 21px; }
+    .results-head p { margin: 0; color: var(--muted); font-size: 12px; }
+    .tag { color: var(--cyan); border-color: #31555f; background: #10232c; }
+    .empty { padding: 38px 20px; color: var(--muted); text-align: center; }
+    .empty-icon { display: grid; width: 48px; height: 48px; place-items: center; margin: 0 auto 13px; border: 1px solid var(--line); border-radius: 15px; color: var(--blue); background: #17243a; font-size: 21px; }
+    .empty strong { display: block; margin-bottom: 4px; color: var(--text); font-size: 14px; }
+    .transcript { overflow: hidden; }
+    .transcript-top { display: flex; justify-content: space-between; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 11px; }
+    .messages { display: grid; gap: 14px; padding: 20px; }
+    .turn { display: flex; align-items: flex-start; gap: 10px; max-width: 82%; animation: appear .28s ease both; }
+    .turn.right { justify-self: end; flex-direction: row-reverse; }
+    @keyframes appear { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: translateY(0); } }
+    .turn-avatar { display: grid; width: 32px; height: 32px; flex: 0 0 32px; place-items: center; border: 1px solid #344463; border-radius: 10px; color: var(--blue); background: #1c3156; font-size: 11px; font-weight: 900; }
+    .turn.right .turn-avatar { color: var(--violet); background: #30294c; border-color: #494064; }
+    .bubble { min-width: 0; padding: 12px 14px; border: 1px solid #2e3c58; border-radius: 4px 14px 14px; background: #18243a; }
+    .turn.right .bubble { border-radius: 14px 4px 14px 14px; background: #1c2b49; }
+    .turn-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; margin-bottom: 6px; color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .4px; text-transform: uppercase; }
+    .badge { padding: 2px 7px; border: 1px solid #3c5071; border-radius: 999px; color: var(--blue); background: #1c3156; font-size: 9px; letter-spacing: .3px; }
+    .badge.accept { color: var(--green); border-color: #28634e; background: #142c28; }
+    .badge.counter { color: var(--amber); border-color: #715a2e; background: #302819; }
+    .badge.reject { color: var(--red); border-color: #7a3a40; background: #301c27; }
+    .badge.open { color: var(--blue); }
+    .message { color: #e4ebf8; font-size: 13px; }
+    .offer {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 11px;
+      padding: 10px;
+      border: 1px solid #2c3d59;
+      border-radius: 10px;
+      background: #101a2b;
+    }
+    .offer-item { color: var(--muted); font-size: 10px; }
+    .offer-item strong { display: block; margin-top: 2px; color: var(--text); font-size: 12px; }
+    .reason { margin-top: 9px; padding-top: 8px; border-top: 1px solid #ffffff0d; color: #a7b5ca; font-size: 11px; font-style: italic; }
+    .summary { margin-top: 14px; padding: 20px; }
+    .summary-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .summary h3 { margin: 0; font-size: 17px; }
+    .outcome { padding: 5px 9px; border: 1px solid #28634e; border-radius: 999px; color: var(--green); background: #142c28; font-size: 10px; font-weight: 900; letter-spacing: .6px; }
+    .outcome.deadlock { color: var(--amber); border-color: #715a2e; background: #302819; }
+    .outcome.breakdown { color: var(--red); border-color: #7a3a40; background: #301c27; }
+    .summary-terms { margin-top: 12px; color: var(--muted); font-size: 12px; }
+    .satisfaction { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 16px; }
+    .score { padding: 12px; border: 1px solid var(--line); border-radius: 11px; background: #0f1829; }
+    .score-top { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 8px; font-size: 11px; font-weight: 700; }
+    .score-top span:last-child { color: var(--cyan); }
+    .meter { height: 5px; overflow: hidden; border-radius: 99px; background: #26334b; }
+    .meter span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #4778e8, var(--cyan)); }
+    .error { margin-top: 14px; padding: 12px 14px; border: 1px solid #7a3a40; border-radius: 10px; color: #ffd5d8; background: #301c27; font-size: 12px; }
+    .footer { margin-top: 22px; color: #77869f; font-size: 11px; text-align: center; }
+    @media (max-width: 760px) {
+      .app { width: min(100% - 28px, 620px); padding-top: 18px; }
+      .topbar { margin-bottom: 34px; }
+      .setup { grid-template-columns: 1fr; padding: 17px; }
+      .setup-side { min-height: 0; }
+      .fields { grid-template-columns: 1fr; }
+      .turn { max-width: 96%; }
+    }
+    @media (max-width: 460px) {
+      .status { font-size: 0; gap: 0; padding: 9px; }
+      .status-dot { width: 8px; height: 8px; }
+      .transcript-top { flex-direction: column; gap: 3px; }
+      .messages { padding: 14px 10px; }
+      .offer { gap: 4px; padding: 8px 6px; }
+      .offer-item { font-size: 9px; }
+      .offer-item strong { font-size: 10px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .01ms !important; scroll-behavior: auto !important; transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="logo" aria-hidden="true">N</div>
+        <div><strong>Negotiation Arena</strong><small>Multi-agent simulation lab</small></div>
+      </div>
+      <div class="status"><span class="status-dot"></span> LOCAL API · PORT 8000</div>
+    </header>
+
+    <section class="intro">
+      <div class="eyebrow">Live backend demo</div>
+      <h1>Every deal has<br>two sides.</h1>
+      <p>Set the scene, choose how each agent negotiates, and watch their offers move toward a deal — or a walk-away.</p>
+    </section>
+
+    <section class="panel setup" aria-labelledby="setup-title">
+      <div>
+        <div class="section-title">
+          <span class="step">01</span>
+          <div><h2 id="setup-title">Configure the negotiation</h2><p>Choose a scenario and a style for each side.</p></div>
+        </div>
+        <div class="fields">
+          <div class="field">
+            <label for="sc">Scenario</label>
+            <select id="sc">
+              <option value="vendor">Vendor pricing</option>
+              <option value="job">Job offer</option>
+              <option value="budget">Project budget</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="p1">Opening agent</label>
+            <select id="p1">
+              <option value="aggressive">Aggressive</option>
+              <option value="collaborative">Collaborative</option>
+              <option value="risk_averse">Risk averse</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="p2">Responding agent</label>
+            <select id="p2">
+              <option value="collaborative">Collaborative</option>
+              <option value="aggressive">Aggressive</option>
+              <option value="risk_averse">Risk averse</option>
+            </select>
+          </div>
+        </div>
+        <div class="scenario-note" id="scenario-note"><strong>Vendor pricing</strong> · A supplier and buyer negotiate price, delivery, and warranty.</div>
+      </div>
+      <aside class="setup-side">
+        <div>
+          <div class="side-label">Your negotiation</div>
+          <div class="agent-pair">
+            <div class="agent-chip"><span class="avatar">A</span><span>Opening agent<small id="opener-label">Aggressive</small></span></div>
+            <div class="agent-chip"><span class="avatar second">B</span><span>Responding agent<small id="responder-label">Collaborative</small></span></div>
+          </div>
+        </div>
+        <div>
+          <button class="run" id="run" type="button">▶ &nbsp; Run negotiation</button>
+          <div class="run-hint" style="margin-top:8px">Usually completes in a few seconds</div>
+        </div>
+      </aside>
+    </section>
+
+    <section class="results" aria-labelledby="results-title" aria-live="polite">
+      <div class="results-head">
+        <div><div class="eyebrow">The conversation</div><h2 id="results-title">Negotiation transcript</h2></div>
+        <span class="tag" id="round-tag">READY WHEN YOU ARE</span>
+      </div>
+      <div id="out">
+        <div class="panel empty">
+          <div class="empty-icon" aria-hidden="true">↗</div>
+          <strong>No negotiation yet</strong>
+          Choose your agents above and run a simulation to see their offers unfold.
+        </div>
+      </div>
+    </section>
+    <footer class="footer">Negotiation Arena · powered by your local FastAPI backend</footer>
+  </main>
+
+  <script>
+    const scenarioDetails = {
+      vendor: ['Vendor pricing', 'A supplier and buyer negotiate price, delivery, and warranty.'],
+      job: ['Job offer', 'A candidate and employer find common ground on salary, joining time, and benefits.'],
+      budget: ['Project budget', 'A project lead and finance align on budget, timeline, and support.']
+    };
+    const labels = { aggressive: 'Aggressive', collaborative: 'Collaborative', risk_averse: 'Risk averse' };
+    const out = document.getElementById('out');
+    const runButton = document.getElementById('run');
+    const roundTag = document.getElementById('round-tag');
+
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, char => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      })[char]);
+    }
+
+    function updateSetup() {
+      const scenario = scenarioDetails[document.getElementById('sc').value];
+      document.getElementById('scenario-note').innerHTML = `<strong>${scenario[0]}</strong> · ${scenario[1]}`;
+      document.getElementById('opener-label').textContent = labels[document.getElementById('p1').value];
+      document.getElementById('responder-label').textContent = labels[document.getElementById('p2').value];
+    }
+
+    function renderResult(data) {
+      const messages = data.transcript.map((turn, index) => {
+        const decision = ['open', 'accept', 'counter', 'reject'].includes(turn.decision) ? turn.decision : 'open';
+        const offer = turn.offer ? `
+          <div class="offer">
+            <div class="offer-item">Price<strong>${Number(turn.offer.price).toLocaleString()}</strong></div>
+            <div class="offer-item">Timeline<strong>${escapeHtml(turn.offer.delivery_days)} days</strong></div>
+            <div class="offer-item">Warranty / benefits<strong>${escapeHtml(turn.offer.warranty_months)} months</strong></div>
+          </div>` : '';
+        return `
+          <article class="turn ${index % 2 ? 'right' : ''}" style="animation-delay:${Math.min(index * 45, 400)}ms">
+            <div class="turn-avatar" aria-hidden="true">${index % 2 ? 'B' : 'A'}</div>
+            <div class="bubble">
+              <div class="turn-meta">${escapeHtml(turn.speaker)} <span>·</span> Round ${escapeHtml(turn.round)}
+                <span class="badge ${decision}">${escapeHtml(turn.decision)}</span>
+                <span>·</span> Utility ${escapeHtml(turn.utility)}
+              </div>
+              <div class="message">${escapeHtml(turn.message)}</div>
+              ${offer}
+              <div class="reason">Reasoning · ${escapeHtml(turn.reasoning)}</div>
+            </div>
+          </article>`;
+      }).join('');
+
+      const outcome = ['deal', 'deadlock', 'breakdown'].includes(data.outcome) ? data.outcome : 'deadlock';
+      const scores = Object.entries(data.satisfaction).map(([name, value]) => {
+        const percentage = Math.max(0, Math.min(100, Math.round(Number(value) * 100)));
+        return `<div class="score">
+          <div class="score-top"><span>${escapeHtml(name)}</span><span>${percentage}%</span></div>
+          <div class="meter"><span style="width:${percentage}%"></span></div>
+        </div>`;
+      }).join('');
+      const terms = data.final_terms ? `
+        <div class="summary-terms">Agreed terms · <strong>${Number(data.final_terms.price).toLocaleString()}</strong> price
+          &nbsp;·&nbsp; ${escapeHtml(data.final_terms.delivery_days)} days
+          &nbsp;·&nbsp; ${escapeHtml(data.final_terms.warranty_months)} months warranty / benefits
+        </div>` : '';
+
+      out.innerHTML = `
+        <div class="panel transcript">
+          <div class="transcript-top"><span>${escapeHtml(data.personalities ? Object.keys(data.personalities).join(' vs ') : 'Negotiation parties')}</span><span>${escapeHtml(data.rounds)} rounds · ${escapeHtml(data.scenario)}</span></div>
+          <div class="messages">${messages}</div>
+        </div>
+        <div class="panel summary">
+          <div class="summary-head"><h3>Final outcome · ${escapeHtml(data.rounds)} rounds</h3><span class="outcome ${outcome}">${outcome.toUpperCase()}</span></div>
+          ${terms}
+          <div class="satisfaction">${scores}</div>
+        </div>`;
+    }
+
+    async function runNegotiation() {
+      runButton.disabled = true;
+      runButton.textContent = 'Negotiation in progress…';
+      roundTag.textContent = 'AGENTS ARE NEGOTIATING';
+      out.innerHTML = '<div class="panel empty"><div class="empty-icon" aria-hidden="true">…</div><strong>Offers are on the table</strong>The agents are working toward an agreement.</div>';
+      try {
+        const response = await fetch('http://localhost:8000/negotiate/run', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            scenario: document.getElementById('sc').value,
+            opener_personality: document.getElementById('p1').value,
+            responder_personality: document.getElementById('p2').value
+          })
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.detail || `Request failed (${response.status})`);
+        if (!Array.isArray(data.transcript) || !data.satisfaction) throw new Error('The backend response is missing negotiation results.');
+        renderResult(data);
+        roundTag.textContent = `${data.rounds} ROUNDS · ${String(data.outcome).toUpperCase()}`;
+      } catch (error) {
+        out.innerHTML = `<div class="error">${escapeHtml(error.message)}<br>Check that the backend is running on port 8000, then try again.</div>`;
+        roundTag.textContent = 'REQUEST FAILED';
+      } finally {
+        runButton.disabled = false;
+        runButton.innerHTML = '▶ &nbsp; Run negotiation';
+      }
+    }
+
+    document.getElementById('sc').addEventListener('change', updateSetup);
+    document.getElementById('p1').addEventListener('change', updateSetup);
+    document.getElementById('p2').addEventListener('change', updateSetup);
+    runButton.addEventListener('click', runNegotiation);
+    updateSetup();
+  </script>
+</body>
+</html>
