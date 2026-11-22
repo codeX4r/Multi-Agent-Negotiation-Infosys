@@ -182,7 +182,8 @@ function normalizeBackendResult<Scenario extends BackendScenario, Terms>(
 }
 
 export function toBackendPersonality(personality: PersonalityType): BackendPersonality {
-  return personality === "risk-averse" ? "risk_averse" : personality;
+  // Personality types are now standardized to use underscore (risk_averse)
+  return personality;
 }
 
 export function runBackendNegotiation(

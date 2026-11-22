@@ -24,7 +24,7 @@ import {
 // ============================================================================
 
 function buildCustomRoles(issues: Issue[], n: number, names?: string[]): Role[] {
-  const personalities: Role['personality'][] = ['collaborative', 'aggressive', 'risk-averse', 'collaborative', 'aggressive'];
+  const personalities: Role['personality'][] = ['collaborative', 'aggressive', 'risk_averse', 'collaborative', 'aggressive'];
   const roles: Role[] = [];
 
   for (let s = 0; s < n; s++) {
@@ -134,7 +134,7 @@ export const SCENARIOS: Record<string, Scenario> = {
         batnaText: 'Defer the purchase to next quarter',
         batnaU: 0.25,
         hidden: 'payment',
-        personality: 'risk-averse',
+        personality: 'risk_averse',
         skill: 'skilled',
         prefs: {
           price: { ideal: 950000, reserve: 1150000, w: 0.5 },
@@ -253,7 +253,7 @@ export const SCENARIOS: Record<string, Scenario> = {
         batnaText: 'Keep the role open another month',
         batnaU: 0.25,
         hidden: 'start',
-        personality: 'risk-averse',
+        personality: 'risk_averse',
         skill: 'skilled',
         prefs: {
           salary: { ideal: 15, reserve: 22, w: 0.2 },
@@ -366,7 +366,7 @@ export const SCENARIOS: Record<string, Scenario> = {
         batnaText: 'Keep last year\'s ops budget via CFO',
         batnaU: 0.28,
         hidden: 'ops',
-        personality: 'risk-averse',
+        personality: 'risk_averse',
         skill: 'skilled',
         prefs: {
           ops: { ideal: 18, reserve: 8, w: 0.6 },

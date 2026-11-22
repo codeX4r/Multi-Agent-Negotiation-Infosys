@@ -165,8 +165,8 @@ describe("backend simulation API", () => {
     })).rejects.toThrow("FastAPI returned an outdated or invalid vendor response");
   });
 
-  it("converts the UI risk-averse value to the backend enum", () => {
-    expect(toBackendPersonality("risk-averse")).toBe("risk_averse");
+  it("passes through the standardized risk_averse personality", () => {
+    expect(toBackendPersonality("risk_averse")).toBe("risk_averse");
   });
 
   it.each(["job", "budget"] as const)("accepts the current FastAPI term shape for %s", async (scenario) => {

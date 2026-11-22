@@ -460,7 +460,7 @@ export class NegotiationEngine {
 
     const tone = (decision === 'accept' ? 'warm'
       : decision === 'reject' ? (agent.personality === 'aggressive' ? 'firm' : 'wary')
-      : ({ aggressive: 'firm', collaborative: 'warm', 'risk-averse': 'wary' }[agent.personality] || 'firm')) as import('./types').ToneLabel;
+      : ({ aggressive: 'firm', collaborative: 'warm', risk_averse: 'wary' }[agent.personality] || 'firm')) as import('./types').ToneLabel;
 
     const ph = phrase(agent, decision, x, table?.x || null, prevOwn?.x || null, this.scenario!);
 

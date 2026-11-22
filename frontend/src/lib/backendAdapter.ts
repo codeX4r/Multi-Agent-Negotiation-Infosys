@@ -19,6 +19,37 @@ export interface BackendVendorTerms {
   paymentDays?: number;
 }
 
+// ─── Standardized Error Response Types ───
+
+export interface BackendErrorDetail {
+  code: string;
+  field?: string;
+  message: string;
+}
+
+export interface BackendErrorResponse {
+  error: string;
+  message: string;
+  details?: BackendErrorDetail[];
+}
+
+export class BackendApiError extends Error {
+  constructor(
+    public readonly status: number,
+    public readonly errorResponse: BackendErrorResponse,
+  ) {
+    super(errorResponse.message);
+    this.name = 'BackendApiError';
+  }
+}
+
+export class BackendUnavailableError extends Error {
+  constructor() {
+    super('FastAPI could not be reached.');
+    this.name = 'BackendUnavailableError';
+  }
+}
+
 export interface BackendTerms {
   price?: number;
   delivery_days?: number;
@@ -177,13 +208,6 @@ export function buildBackendVendorConfig(engineConfig: EngineConfig): BackendVen
   return buildBackendScenarioConfig(engineConfig);
 }
 
-export class BackendUnavailableError extends Error {
-  constructor() {
-    super('FastAPI could not be reached.');
-    this.name = 'BackendUnavailableError';
-  }
-}
-
 export interface BackendArenaUpdate {
   state: SimulationState;
   transcript: TranscriptEntry[];
@@ -273,7 +297,8 @@ function isBackendResponse(
 }
 
 function toBackendPersonality(personality: Agent['personality']): BackendPersonality {
-  return personality === 'risk-averse' ? 'risk_averse' : personality;
+  // Personality types are now standardized to use underscore (risk_averse)
+  return personality;
 }
 
 export function mapBackendVendorTerms(terms: {
@@ -354,20 +379,37 @@ async function postBackendNegotiation(
   try {
     payload = await response.json();
   } catch {
-    throw new Error('FastAPI returned a response that was not valid JSON.');
+    throw new BackendApiError(response.status, {
+      error: 'parse_error',
+      message: 'FastAPI returned a response that was not valid JSON.',
+    });
   }
 
   if (!response.ok) {
-    const detail = isRecord(payload) && typeof payload.detail === 'string'
-      ? payload.detail
-      : `FastAPI request failed (${response.status}).`;
-    throw new Error(detail);
+    let errorResponse: BackendErrorResponse;
+    if (isRecord(payload) && 'error' in payload) {
+      // Standardized error format
+      errorResponse = payload as BackendErrorResponse;
+    } else if (isRecord(payload) && typeof payload.detail === 'string') {
+      // Legacy format (fallback)
+      errorResponse = {
+        error: 'http_error',
+        message: payload.detail,
+      };
+    } else {
+      errorResponse = {
+        error: 'http_error',
+        message: `FastAPI request failed (${response.status}).`,
+      };
+    }
+    throw new BackendApiError(response.status, errorResponse);
   }
 
   if (!isBackendResponse(payload, request.scenario)) {
-    throw new Error(
-      `FastAPI returned data that does not match the ${request.scenario} response contract.`,
-    );
+    throw new BackendApiError(response.status, {
+      error: 'invalid_response',
+      message: `FastAPI returned data that does not match the ${request.scenario} response contract.`,
+    });
   }
   return payload;
 }

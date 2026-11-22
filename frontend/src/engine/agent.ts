@@ -78,7 +78,7 @@ export function phrase(
           'That works for us, thank you for the movement. Agreed.',
           'Great, I think that is fair for both sides. We accept.'
         ],
-        'risk-averse': [
+        risk_averse: [
           'That is acceptable. Let\'s confirm it in writing.',
           'Okay, we can accept that. Please confirm the schedule.'
         ]
@@ -98,7 +98,7 @@ export function phrase(
       text: pick({
         aggressive: ['Our position is clear: ', 'Let\'s be direct. We need '],
         collaborative: ['To get us started, here is a package: ', 'Here is an opening proposal we think is balanced: '],
-        'risk-averse': ['We would like to start carefully with ', 'Our initial proposal, subject to review: ']
+        risk_averse: ['We would like to start carefully with ', 'Our initial proposal, subject to review: ']
       }[P]) + tops.map(is => `${is.label.toLowerCase()} at ${formatValue(is, x![is.id])}`).join(' and ') + '.',
       rationale: 'Opening anchored on this party\'s top priorities.',
       plan: `Anchor high on ${tops.map(t => t.label).join(' + ')}.`
@@ -147,7 +147,7 @@ export function phrase(
   s += '. ' + pick({
     aggressive: ['That is where we stand.', 'Take that seriously, it is a strong offer.', 'We won\'t go much further.'],
     collaborative: ['What matters most on your side?', 'Does that help you get closer?', 'Can we build on that together?'],
-    'risk-averse': ['Can we confirm that so we stay on schedule?', 'We\'d want assurance before moving again.', 'Does that reduce the risk for everyone?']
+    risk_averse: ['Can we confirm that so we stay on schedule?', 'We\'d want assurance before moving again.', 'Does that reduce the risk for everyone?']
   }[P]);
 
   const rationale = decision === 'reject'
@@ -208,7 +208,7 @@ export async function decideAgentTurn(
 
   const tone: ToneLabel = decision === 'accept' ? 'warm'
     : decision === 'reject' ? (agent.personality === 'aggressive' ? 'firm' : 'wary')
-    : ({ aggressive: 'firm', collaborative: 'warm', 'risk-averse': 'wary' }[agent.personality] || 'firm') as ToneLabel;
+    : ({ aggressive: 'firm', collaborative: 'warm', risk_averse: 'wary' }[agent.personality] || 'firm') as ToneLabel;
 
   const ph = phrase(agent, decision, x, table?.x || null, prevOwn?.x || null, scenario);
 

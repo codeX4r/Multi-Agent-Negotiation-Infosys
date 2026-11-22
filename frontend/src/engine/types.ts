@@ -7,7 +7,7 @@
 // Core Primitives
 // ============================================================================
 
-export type PersonalityType = 'aggressive' | 'collaborative' | 'risk-averse';
+export type PersonalityType = 'aggressive' | 'collaborative' | 'risk_averse';
 export type SkillLevel = 'novice' | 'skilled' | 'expert';
 export type ClimateType = 'stable' | 'volatile' | 'crisis';
 export type OrchestratorRole = 'timekeeper' | 'mediator' | 'enforcer' | 'injector' | 'auditor';
@@ -42,7 +42,7 @@ export const PERSONALITIES: Record<PersonalityType, Personality> = {
     acceptBar: 0.75,
     desc: 'Moderate opening, steady concessions, looks for trades.'
   },
-  'risk-averse': {
+  risk_averse: {
     label: 'Risk-averse',
     icon: '🛡',
     beta: 0.45,

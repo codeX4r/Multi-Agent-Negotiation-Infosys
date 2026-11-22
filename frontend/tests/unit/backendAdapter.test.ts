@@ -22,7 +22,7 @@ const vendor: Agent = {
   batnaText: '',
   batnaU: 0.3,
   hidden: '',
-  personality: 'risk-averse',
+  personality: 'risk_averse',
   skill: 'skilled',
   prefs: {},
   w: {},
