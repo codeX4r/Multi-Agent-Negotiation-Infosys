@@ -357,6 +357,7 @@ export interface SimulationState {
   waitingHuman: boolean;
   blocked: boolean;
   endReason: string;
+  backendOutcome?: 'deal' | 'breakdown' | 'deadlock';
   lastTone: Record<string, 'warm' | 'firm' | 'wary' | 'pushy' | 'neutral'>;
   forkedFrom: number | null;
   scenario: string;

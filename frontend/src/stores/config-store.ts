@@ -3,6 +3,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { Agent, Issue, Role, Scenario, Event } from '@/engine/types';
+import { getScenario } from '@/engine/scenarios';
 
 interface ConfigDraft {
   scenarioId: string | null;
@@ -83,9 +84,18 @@ export const useConfigStore = create<ConfigState>()(
       draft: defaultDraft,
 
       setScenario: (id) => {
-        set((state) => ({
-          draft: { ...state.draft, scenarioId: id, tab: 'seats' },
-        }));
+        const scenario = getScenario(id);
+        const { draft } = get();
+        const validRoleIds = new Set(scenario.roles.map((role) => role.id));
+        const seatsMatchScenario =
+          draft.seats.length > 0 && draft.seats.every((seat) => validRoleIds.has(seat));
+
+        if (draft.scenarioId === id && seatsMatchScenario) {
+          set({ draft: { ...draft, tab: 'seats' } });
+          return;
+        }
+
+        get().resetToTemplate(scenario);
       },
 
       setMode: (mode) => {

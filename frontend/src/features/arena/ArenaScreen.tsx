@@ -8,6 +8,18 @@ import { useSimulation } from '@/hooks/useSimulation';
 import { Button } from '@/components/ui/Button';
 import { getScenario, fmtVal } from '@/engine/scenarios';
 import {
+  adaptBackendResult,
+  BackendUnavailableError,
+  buildBackendScenarioConfig,
+  runBackendScenarioNegotiation,
+} from '@/lib/backendAdapter';
+import {
+  formatOutcomeReason,
+  getOutcomeTitle,
+  getSatisfactionTitle,
+  shouldShowTurnReasoning,
+} from '@/lib/backendResultPresentation';
+import {
   PERSONALITIES, CLIMATES, AUTONOMY, BACKDROPS,
   getEmotionFace, getEmotionLabel,
 } from '@/engine/types';
@@ -247,7 +259,11 @@ function OfferCard({
       {scenario?.issues.map((is: any) => (
         <div key={is.id} className="tr">
           <span>{is.label}</span>
-          <b>{fmtVal(is, offer.x[is.id])}</b>
+          <b>
+            {offer.x[is.id] == null
+              ? 'Not provided by backend'
+              : fmtVal(is, offer.x[is.id])}
+          </b>
         </div>
       ))}
       <div className="acc">
@@ -406,9 +422,16 @@ export function ArenaScreen() {
 
   useEffect(() => {
     let cancelled = false;
+    const controller = new AbortController();
 
     const startSession = async () => {
       try {
+        const initialDraft = useConfigStore.getState().draft;
+        if (!initialDraft.scenarioId) {
+          useConfigStore.getState().resetToTemplate(getScenario('vendor'));
+          useConfigStore.getState().setMode('simulation');
+        }
+
         await initialize();
 
         if (cancelled) return;
@@ -419,10 +442,52 @@ export function ArenaScreen() {
           // Practice: run until the human's turn.
           setArenaPlaying(true);
           runLoop(true);
-        } else {
-          // Simulation: automatically start AI vs AI.
-          togglePlay(true);
+          return;
         }
+
+        const draft = useConfigStore.getState().draft;
+        if (
+          draft.mode === 'simulation' &&
+          (draft.scenarioId === 'vendor' || draft.scenarioId === 'job' || draft.scenarioId === 'budget')
+        ) {
+          const participants = state?.agents ?? [];
+          try {
+            const engineConfig = useConfigStore.getState().buildEngineConfig(
+              getScenario(draft.scenarioId),
+            );
+            const backendConfig = buildBackendScenarioConfig(engineConfig);
+            if (state && participants.length > 1) {
+              const result = await runBackendScenarioNegotiation(
+                draft.scenarioId,
+                backendConfig,
+                controller.signal,
+              );
+              if (cancelled) return;
+
+              const update = adaptBackendResult(result, state, participants);
+              const session = useSessionStore.getState();
+              session.setEngineState(update.state);
+              session.setTranscript(update.transcript);
+              session.setTableOffer(update.tableOffer);
+              session.setCurrentSpeaker(update.transcript.at(-1)?.by ?? null);
+              setArenaPlaying(false);
+              setArenaPaused(false);
+              return;
+            } else {
+              showToast('The backend setup needs at least two configured parties; using the local simulation.');
+            }
+          } catch (error) {
+            if (cancelled) return;
+            showToast(
+              error instanceof BackendUnavailableError
+                ? 'FastAPI is unreachable; using the scripted simulation.'
+                : `Backend negotiation failed: ${error instanceof Error ? error.message : 'Unknown error'}. Using the scripted simulation.`,
+            );
+          }
+        }
+
+        // Simulation fallback when the backend is unavailable or unsupported.
+        togglePlay(true);
       } catch {
         // initialize() already displays the error.
       }
@@ -432,6 +497,7 @@ export function ArenaScreen() {
 
     return () => {
       cancelled = true;
+      controller.abort();
     };
 
     // Initialize once whenever the Arena screen is entered.
@@ -451,21 +517,6 @@ export function ArenaScreen() {
   const [offerFormValues, setOfferFormValues] = useState<Record<string, number>>({});
   const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [rightCollapsed, setRightCollapsed] = useState(false);
-
-  /* ── Auto-initialize when arriving at arena without an engine state ──
-     This handles both Quick Demo and normal navigation.
-  */
-  useEffect(() => {
-    if (!engineState) {
-      const configDraft = useConfigStore.getState().draft;
-      if (!configDraft.scenarioId) {
-        // Fallback: load vendor scenario if nothing is configured
-        useConfigStore.getState().resetToTemplate(getScenario('vendor'));
-        useConfigStore.getState().setMode('simulation');
-      }
-      initialize();
-    }
-  }, [engineState, initialize]);
 
   /* ── Start the simulation loop once initialised (simulation mode only) ──
      In practice mode the loop is driven by user input.
@@ -535,6 +586,9 @@ export function ArenaScreen() {
     ? ((engineState.round - 1) / Math.max(1, lim)) * 100
     : 0;
   const pressure = engineState.pressure * 100;
+  const backendOutcome = engineState.backendOutcome;
+  const showBackendResult = Boolean(backendOutcome && engineState.status !== 'running');
+  const backendOutcomeTitle = backendOutcome ? getOutcomeTitle(backendOutcome) : null;
 
   /* ── Tone preview (practice only) ── */
   let tonePreview: { label: string; p: Record<string, number> } | null = null;
@@ -569,9 +623,7 @@ export function ArenaScreen() {
               >
                 {engineState.status === 'running' && !arenaPaused
                   ? 'Live'
-                  : engineState.status === 'deal'
-                    ? 'Deal'
-                    : 'No deal'}
+                  : backendOutcomeTitle ?? (engineState.status === 'deal' ? 'Deal reached' : 'No deal')}
               </span>
               <span className="pill" id="a-mode">
                 {isSim ? 'Simulation' : 'Practice'}
@@ -672,6 +724,41 @@ export function ArenaScreen() {
         </div>
       </div>
 
+      {showBackendResult && backendOutcome && (
+        <section
+          className={`card backend-result-summary ${backendOutcome === 'deal' ? 'success' : 'ended'}`}
+          aria-live="polite"
+          aria-label="Negotiation result"
+        >
+          <div className="backend-result-heading">
+            <span className={`pill ${backendOutcome === 'deal' ? 'live' : 'bad'}`}>Result</span>
+            <h2>{backendOutcomeTitle}</h2>
+            <p className="mini">{formatOutcomeReason(backendOutcome, engineState.endReason)}</p>
+          </div>
+          <div className="backend-result-parties">
+            <h3>{getSatisfactionTitle(backendOutcome)}</h3>
+            <p className="mini">
+              {backendOutcome === 'deal'
+                ? 'How each party felt about the agreed offer.'
+                : 'How close the last offer came to each party’s preferences.'}
+            </p>
+            <div className="backend-result-party-list">
+              {engineState.agents.map((agent) => {
+                const satisfaction = engineState.table
+                  ? Math.round(calculateUtility(agent, engineState.table.x, scenario) * 100)
+                  : null;
+                return (
+                  <div className="metricline" key={agent.id}>
+                    <span>{agent.human ? 'You' : agent.name}</span>
+                    <strong>{satisfaction === null ? 'No offer' : `${satisfaction}%`}</strong>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* ══ 3-column arena layout ══ */}
       <div
         className={`arena${leftCollapsed ? ' noleft' : ''}${rightCollapsed ? ' noright' : ''}`}
@@ -703,7 +790,12 @@ export function ArenaScreen() {
                   </div>
                 )}
                 {transcript.map((entry, i) => (
-                  <TranscriptMsg key={i} entry={entry} agents={engineState.agents} />
+                  <TranscriptMsg
+                    key={i}
+                    entry={entry}
+                    agents={engineState.agents}
+                    showReasoning={isSim && mindReveal}
+                  />
                 ))}
               </div>
             </>
@@ -986,9 +1078,11 @@ export function ArenaScreen() {
 function TranscriptMsg({
   entry,
   agents,
+  showReasoning,
 }: {
   entry: TranscriptEntry;
   agents: Agent[];
+  showReasoning: boolean;
 }) {
   const agent = agents.find((item) => item.id === entry.by);
   const isMe = Boolean(agent?.human);
@@ -997,6 +1091,8 @@ function TranscriptMsg({
   const isRound = entry.kind === 'round';
   const isDeal = entry.kind === 'deal';
   const isBreakdown = entry.kind === 'breakdown';
+  const rationale = entry.rationale?.trim();
+  const showRationale = shouldShowTurnReasoning(showReasoning, rationale);
 
   let className = 'msg';
   if (isMe) className += ' me';
@@ -1018,6 +1114,11 @@ function TranscriptMsg({
         )}
       </div>
       <div className="msgbody">{entry.text}</div>
+      {showRationale && (
+        <p className="msgreason">
+          <strong>Why they chose this:</strong> {rationale}
+        </p>
+      )}
     </div>
   );
 }

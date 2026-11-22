@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { getScenario, fmtVal } from '@/engine/scenarios';
 import { PERSONALITIES, SKILLS, CLIMATES, BACKDROPS, AUTONOMY, ORCH_ROLES, ORCH_ROLE_LABELS, SEAT_COLORS } from '@/engine/types';
+import { buildBackendVendorConfig } from '@/lib/backendAdapter';
 
 export function BriefingScreen() {
   const { setScreen, go } = useUIStore();
@@ -18,6 +19,9 @@ export function BriefingScreen() {
   // Build config for display
   const engineConfig = buildEngineConfig(scenario as any);
   const agents = engineConfig?.agents || [];
+  const backendVendorConfig = engineConfig?.scenario === 'vendor'
+    ? buildBackendVendorConfig(engineConfig)
+    : null;
   const me = prac ? agents.find(a => a.human) : null;
   const cl = CLIMATES[draft.climate];
 
@@ -150,6 +154,7 @@ export function BriefingScreen() {
   scenario: engineConfig.scenario,
   mode: engineConfig.mode,
   rounds: engineConfig.rounds,
+  ...(backendVendorConfig ? { backend_vendor_config: backendVendorConfig } : {}),
   climate: engineConfig.climate,
   event_freq: engineConfig.eventFreq,
   deadlock_n: engineConfig.deadlockN,

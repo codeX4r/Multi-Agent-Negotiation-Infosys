@@ -15,8 +15,6 @@ export interface ModalProps {
 export function Modal({ children, onClose, closable = true, className = '', level = 'default' }: ModalProps) {
   const { modal, closeModal } = useUIStore();
 
-  if (!modal?.isOpen) return null;
-
   const handleOverlayClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget && closable) {
       closeModal();
@@ -32,13 +30,16 @@ export function Modal({ children, onClose, closable = true, className = '', leve
   };
 
   useEffect(() => {
+    if (!modal?.isOpen) return;
     document.addEventListener('keydown', handleKeyDown);
     document.body.style.overflow = 'hidden';
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
       document.body.style.overflow = '';
     };
-  }, []);
+  }, [closable, modal?.isOpen, onClose, closeModal]);
+
+  if (!modal?.isOpen) return null;
 
   const modalContent = (
     <div className="overlay show" onClick={handleOverlayClick}>

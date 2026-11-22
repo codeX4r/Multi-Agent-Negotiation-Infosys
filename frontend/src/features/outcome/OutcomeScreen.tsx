@@ -11,7 +11,7 @@ import { useConfigStore } from '@/stores/config-store';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { getScenario, PERSONALITIES, CLIMATES, BACKDROPS, AUTONOMY, SEAT_COLORS, fmtVal } from '@/engine/scenarios';
-import type { Agent, SimulationState } from '@/engine/types';
+import type { Agent, Scenario, SimulationState } from '@/engine/types';
 
 export function OutcomeScreen() {
   const { setScreen, go } = useUIStore();
@@ -251,11 +251,11 @@ function generateReport(): Report | null {
   // Per-agent metrics
   const per = engineState.agents.map((a: any) => {
     const offs = engineState.offers.filter((f: any) => f.by === a.id);
-    const firstU = offs.length ? calculateUtility(a, offs[0].x) : null;
-    const lastU = offs.length ? calculateUtility(a, offs[offs.length - 1].x) : null;
-    const finalU = engineState.table ? calculateUtility(a, engineState.table.x) : 0;
+    const firstU = offs.length ? calculateUtility(a, offs[0].x, scenario) : null;
+    const lastU = offs.length ? calculateUtility(a, offs[offs.length - 1].x, scenario) : null;
+    const finalU = engineState.table ? calculateUtility(a, engineState.table.x, scenario) : 0;
     const firstGive = offs.findIndex((f: any, i: number) =>
-      i > 0 && calculateUtility(a, f.x) < calculateUtility(a, offs[i - 1].x) - 0.005
+      i > 0 && calculateUtility(a, f.x, scenario) < calculateUtility(a, offs[i - 1].x, scenario) - 0.005
     );
 
     return {
@@ -308,7 +308,9 @@ function generateReport(): Report | null {
     mine.forEach((e: any) => tones[e.tone] = (tones[e.tone] || 0) + 1);
     const qs = mine.filter((e: any) => /\?/.test(e.text)).length;
     const offs = engineState.offers.filter((f: any) => f.by === human.id);
-    const steps = offs.slice(1).map((f: any, i: number) => calculateUtility(human, offs[i].x) - calculateUtility(human, f.x));
+    const steps = offs.slice(1).map((f: any, i: number) =>
+      calculateUtility(human, offs[i].x, scenario) - calculateUtility(human, f.x, scenario),
+    );
     const avg = steps.length ? steps.reduce((a: number, b: number) => a + b, 0) / steps.length : 0;
 
     if ((tones.pushy || 0) >= 2) habits.push({ good: false, t: `You sounded pushy in ${tones.pushy} lines, each one cost trust.` });
@@ -366,11 +368,20 @@ function calculateVIssue(agent: any, issueId: string, val: number) {
   return d === 0 ? 1 : Math.max(0, Math.min(1, (val - p.reserve) / d));
 }
 
-function calculateUtility(agent: any, x: Record<string, number>) {
+function calculateUtility(agent: Agent, x: Record<string, number>, scenario: Scenario) {
   if (!x) return 0;
   let u = 0;
-  // Would need scenario issues - simplified
-  return u;
+  for (const issue of scenario.issues) {
+    const preference = agent.prefs[issue.id];
+    const weight = agent.w[issue.id] ?? preference?.w ?? 0;
+    if (!preference || weight <= 0) continue;
+    const range = preference.ideal - preference.reserve;
+    const score = range === 0
+      ? 1
+      : Math.max(0, Math.min(1, (x[issue.id] - preference.reserve) / range));
+    u += weight * score;
+  }
+  return Math.max(0, Math.min(1, u));
 }
 
 function createGauge(val: number, color: string, batna: number): string {
