@@ -88,10 +88,10 @@ Execute a multi-agent negotiation simulation.
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
 | `scenario` | `"vendor" \| "job" \| "budget"` | No | `"vendor"` | Scenario identifier |
-| `opener_personality` | `"aggressive" \| "collaborative" \| "risk_averse"` | No | Scenario default | Opener's personality |
-| `responder_personality` | `"aggressive" \| "collaborative" \| "risk_averse"` | No | Scenario default | Responder's personality |
-| `max_rounds` | `integer` | No | `12` | Maximum negotiation rounds (1–100) |
-| `config` | `NegotiationConfig` | No | `null` | Full multi-party configuration |
+| `opener_personality` | `"aggressive" \| "collaborative" \| "risk_averse"` | No | Scenario default | Opener's personality (used only when `config` is not provided) |
+| `responder_personality` | `"aggressive" \| "collaborative" \| "risk_averse"` | No | Scenario default | Responder's personality (used only when `config` is not provided) |
+| `max_rounds` | `integer` | No | `12` | Maximum negotiation rounds (1–100); used only when `config` is not provided |
+| `config` | `NegotiationConfig` | No | `null` | Full multi-party configuration; when provided, its `rounds_limit` takes precedence over root `max_rounds` |
 
 ##### Config Object (`NegotiationConfig`)
 
@@ -162,10 +162,17 @@ Execute a multi-agent negotiation simulation.
 | `job` | `salary`, `bonus`, `start`, `remote` | None | `recruiter` | `collaborative`, `collaborative` |
 | `budget` | `eng`, `mkt`, `ops`, `timeline` | **Required**: sum=50, derived=ops, of=[eng,mkt] | `eng` | `aggressive`, `collaborative` |
 
-**Canonical Issue IDs (used in `target`, `walk_away`, `weights`):**
+**Canonical Issue IDs (used in `target`, `walk_away`, `weights`, `config.issues`):**
 - Vendor: `price`, `delivery`, `warranty`, `payment`
 - Job: `salary`, `bonus`, `start`, `remote`
 - Budget: `eng`, `mkt`, `ops`, `timeline`
+
+**Serialized Term Field Names (used in backend `Terms` model and response `final_terms`/`offer`):**
+- Vendor: `price`, `delivery_days`, `warranty_months`, `payment_days`
+- Job: `salary`, `bonus`, `start`, `remote`
+- Budget: `eng`, `mkt`, `ops`, `timeline`
+
+> **Note:** Canonical Issue IDs are used in request configuration (`target`, `walk_away`, `weights`, `issues`). Serialized Term Field Names are used in backend `Terms` model, response `final_terms`, and transcript `offer` objects. The frontend adapter handles the conversion between these two naming conventions.
 
 #### 3.1.5 Complete Request Examples
 
@@ -181,7 +188,7 @@ Execute a multi-agent negotiation simulation.
 ```json
 {
   "scenario": "vendor",
-  "mode": "simulation",
+  "max_rounds": 12,
   "config": {
     "parties": [
       {
@@ -346,9 +353,9 @@ Execute a multi-agent negotiation simulation.
   "rounds": 8,
   "final_terms": {
     "price": 1100000,
-    "delivery": 25,
-    "warranty": 12,
-    "payment": 30
+    "delivery_days": 25,
+    "warranty_months": 12,
+    "payment_days": 30
   },
   "satisfaction": {
     "Supplier": 0.72,
@@ -363,7 +370,7 @@ Execute a multi-agent negotiation simulation.
       "decision": "open",
       "utility": 0.95,
       "message": "Our position is clear: we need price at ₹12,50,000 and delivery at 40 days.",
-      "offer": { "price": 1250000, "delivery": 40, "warranty": 6, "payment": 0 },
+      "offer": { "price": 1250000, "delivery_days": 40, "warranty_months": 6, "payment_days": 0 },
       "reasoning": "Opening with my ideal terms."
     },
     {
@@ -373,7 +380,7 @@ Execute a multi-agent negotiation simulation.
       "decision": "counter",
       "utility": 0.32,
       "message": "Could we meet nearer my position on price? I can trade on other terms, but need price to move to ₹9,80,000.",
-      "offer": { "price": 980000, "delivery": 15, "warranty": 24, "payment": 60 },
+      "offer": { "price": 980000, "delivery_days": 15, "warranty_months": 24, "payment_days": 60 },
       "reasoning": "Offer below this party's target. Conceded on delivery (lower priority); pushed on price."
     }
     // ... more entries
@@ -414,7 +421,7 @@ Execute a multi-agent negotiation simulation.
 | `decision` | `"open" \| "counter" \| "accept" \| "reject"` | Decision type |
 | `utility` | `number` | Acting party's utility [0,1] |
 | `message` | `string` | User-facing message |
-| `offer` | `Record<string, number> \| null` | Offer terms (canonical IDs) |
+| `offer` | `Record<string, number> \| null` | Offer terms (serialized term field names, e.g., `delivery_days`, `warranty_months`, `payment_days`) |
 | `reasoning` | `string` | Concise decision explanation |
 
 ### 4.3 Outcome Values
@@ -434,7 +441,7 @@ Execute a multi-agent negotiation simulation.
   "outcome": "deal",
   "outcome_reason": "All parties accepted the offer at round 8.",
   "rounds": 8,
-  "final_terms": { "price": 1100000, "delivery": 25, "warranty": 12, "payment": 30 },
+  "final_terms": { "price": 1100000, "delivery_days": 25, "warranty_months": 12, "payment_days": 30 },
   "satisfaction": { "Supplier": 0.72, "Buyer": 0.68, "Finance": 0.65 }
 }
 ```
@@ -572,10 +579,13 @@ Execute a multi-agent negotiation simulation.
 #### 404 — Not Found
 ```json
 {
-  "detail": "Not Found"
+  "error": "http_error",
+  "message": "Not Found",
+  "details": null
 }
 ```
-> **Note:** The 404 handler uses Starlette's default behavior. The HTTPException handler is registered but Starlette's internal handling may return the raw format in test environments.
+
+The catch-all route at `/` with `HTTPException(404, "Not Found")` ensures standardized error format for all unmatched routes.
 
 #### 500 — Internal Server Error
 ```json
