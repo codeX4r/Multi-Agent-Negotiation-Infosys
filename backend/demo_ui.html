@@ -307,7 +307,7 @@
     const scenarioDetails = {
       vendor: ['Vendor pricing', 'A supplier and buyer negotiate price, delivery, and warranty.'],
       job: ['Job offer', 'A candidate and employer find common ground on salary, joining time, and benefits.'],
-      budget: ['Project budget', 'A project lead and finance align on budget, timeline, and support.']
+      budget: ['Project budget', 'Engineering and Marketing negotiate their allocations; Operations receives the remainder.']
     };
     const labels = { aggressive: 'Aggressive', collaborative: 'Collaborative', risk_averse: 'Risk averse' };
     const out = document.getElementById('out');
@@ -318,6 +318,32 @@
       return String(value ?? '').replace(/[&<>"']/g, char => ({
         '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
       })[char]);
+    }
+
+    function formatTerms(terms, scenario) {
+      const number = value => Number(value).toLocaleString('en-IN');
+      if (scenario === 'vendor') {
+        return [
+          ['Price', `₹${number(terms.price)}`],
+          ['Delivery', `${number(terms.delivery)} days`],
+          ['Warranty', `${number(terms.warranty)} months`],
+          ['Payment', `Net-${number(terms.payment)}`]
+        ];
+      }
+      if (scenario === 'job') {
+        return [
+          ['Base salary', `₹${Number(terms.salary).toFixed(1)} LPA`],
+          ['Joining bonus', `₹${number(terms.bonus)}L`],
+          ['Joining date', `${number(terms.start)} weeks`],
+          ['Remote days', `${number(terms.remote)} days/week`]
+        ];
+      }
+      return [
+        ['Engineering', `₹${number(terms.eng)}L`],
+        ['Marketing', `₹${number(terms.mkt)}L`],
+        ['Operations', `₹${number(terms.ops)}L`],
+        ['Timeline', `${number(terms.timeline)} months`]
+      ];
     }
 
     function updateSetup() {
@@ -332,9 +358,9 @@
         const decision = ['open', 'accept', 'counter', 'reject'].includes(turn.decision) ? turn.decision : 'open';
         const offer = turn.offer ? `
           <div class="offer">
-            <div class="offer-item">Price<strong>${Number(turn.offer.price).toLocaleString()}</strong></div>
-            <div class="offer-item">Timeline<strong>${escapeHtml(turn.offer.delivery_days)} days</strong></div>
-            <div class="offer-item">Warranty / benefits<strong>${escapeHtml(turn.offer.warranty_months)} months</strong></div>
+            ${formatTerms(turn.offer, data.scenario).map(([label, value]) => `
+              <div class="offer-item">${escapeHtml(label)}<strong>${escapeHtml(value)}</strong></div>
+            `).join('')}
           </div>` : '';
         return `
           <article class="turn ${index % 2 ? 'right' : ''}" style="animation-delay:${Math.min(index * 45, 400)}ms">
@@ -360,9 +386,10 @@
         </div>`;
       }).join('');
       const terms = data.final_terms ? `
-        <div class="summary-terms">Agreed terms · <strong>${Number(data.final_terms.price).toLocaleString()}</strong> price
-          &nbsp;·&nbsp; ${escapeHtml(data.final_terms.delivery_days)} days
-          &nbsp;·&nbsp; ${escapeHtml(data.final_terms.warranty_months)} months warranty / benefits
+        <div class="summary-terms">Agreed terms ·
+          ${formatTerms(data.final_terms, data.scenario)
+            .map(([label, value]) => `${escapeHtml(label)}: <strong>${escapeHtml(value)}</strong>`)
+            .join(' &nbsp;·&nbsp; ')}
         </div>` : '';
 
       out.innerHTML = `
