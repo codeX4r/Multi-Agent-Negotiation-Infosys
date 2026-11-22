@@ -1,6 +1,7 @@
 import { apiRequest } from "@/lib/api-client";
 import type { BackendScenarioConfig } from "@/lib/backendAdapter";
 import type { PersonalityType } from "@/engine/types";
+import { mapUIScenarioToBackend } from "@/lib/backendAdapter";
 
 export type BackendScenario = "vendor" | "job" | "budget";
 export type BackendPersonality = "aggressive" | "collaborative" | "risk_averse";

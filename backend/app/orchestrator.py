@@ -176,7 +176,7 @@ def run_negotiation(scenario: str, opener_personality: str,
     on_table = opener.target
     last = {opener.id: opener.target, responder.id: None}
     transcript = [{
-        "round": 0, "speaker": opener.role, "decision": "open",
+        "round": 0, "speaker": opener.role, "speaker_id": opener.id, "decision": "open",
         "utility": utility(opener, on_table),
         "message": write_message(opener, "open", on_table),
         "offer": on_table.model_dump(exclude_none=True),
@@ -257,7 +257,7 @@ def run_negotiation(scenario: str, opener_personality: str,
                 "remote": max(0, min(5, remote)),
             })
         entry = {
-            "round": rnd, "speaker": speaker.role, "decision": d.decision,
+            "round": rnd, "speaker": speaker.role, "speaker_id": speaker.id, "decision": d.decision,
             "utility": d.utility,
             "message": write_message(
                 speaker,
@@ -290,6 +290,20 @@ def run_negotiation(scenario: str, opener_personality: str,
     return {
         "scenario": scenario,
         "personalities": {opener.role: opener_personality, responder.role: responder_personality},
+        "parties": [
+            {
+                "id": opener.id,
+                "role": opener.role,
+                "personality": opener_personality,
+                "skill": opener.skill,
+            },
+            {
+                "id": responder.id,
+                "role": responder.role,
+                "personality": responder_personality,
+                "skill": responder.skill,
+            },
+        ],
         "outcome": outcome,
         "outcome_reason": outcome_reason,
         "rounds": len(transcript) - 1,

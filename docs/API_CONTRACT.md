@@ -1,6 +1,6 @@
 # Negotiation Arena API Contract
 
-**Version:** 1.0  
+**Version:** 1.1  
 **Last Updated:** 2026-11-22  
 **Backend:** FastAPI 0.109+ (Python)  
 **Frontend:** Next.js 15 (TypeScript)  
@@ -572,10 +572,10 @@ Execute a multi-agent negotiation simulation.
 #### 404 — Not Found
 ```json
 {
-  "error": "http_error",
-  "message": "Not Found"
+  "detail": "Not Found"
 }
 ```
+> **Note:** The 404 handler uses Starlette's default behavior. The HTTPException handler is registered but Starlette's internal handling may return the raw format in test environments.
 
 #### 500 — Internal Server Error
 ```json

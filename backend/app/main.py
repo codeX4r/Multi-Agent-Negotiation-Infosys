@@ -6,7 +6,7 @@ from fastapi.exceptions import RequestValidationError
 from pydantic import BaseModel, Field, model_validator, ValidationError
 from pathlib import Path
 from .orchestrator import run_negotiation
-from .models import NegotiationConfig, SCENARIO_ISSUES
+from .models import NegotiationConfig, SCENARIO_ISSUES, NegotiationResponse
 
 app = FastAPI(
     title="Negotiation Arena API",
@@ -155,7 +155,7 @@ async def health_check():
     return {"status": "healthy", "service": "negotiation-arena-api"}
 
 
-@app.post("/negotiate/run")
+@app.post("/negotiate/run", response_model=NegotiationResponse)
 async def negotiate(req: RunRequest):
     defaults = {
         "vendor": ("aggressive", "collaborative"),
@@ -170,3 +170,10 @@ async def negotiate(req: RunRequest):
         req.max_rounds,
         req.config,
     )
+
+
+# Catch-all route for 404 handling (must be last)
+@app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"])
+async def catch_all(path: str):
+    from fastapi import HTTPException
+    raise HTTPException(status_code=404, detail="Not Found")

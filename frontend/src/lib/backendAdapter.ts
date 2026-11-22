@@ -12,6 +12,27 @@ export type BackendOutcome = 'deal' | 'breakdown' | 'deadlock';
 type BackendPersonality = 'aggressive' | 'collaborative' | 'risk_averse';
 export type BackendScenario = 'vendor' | 'job' | 'budget';
 
+// Frontend UI scenario IDs (for display)
+export type UISenarioId = 'vendor_pricing' | 'job_offer' | 'project_budget';
+
+/** Map UI scenario IDs to backend canonical scenario IDs */
+export function mapUIScenarioToBackend(ui: UISenarioId): BackendScenario {
+  switch (ui) {
+    case 'vendor_pricing': return 'vendor';
+    case 'job_offer': return 'job';
+    case 'project_budget': return 'budget';
+  }
+}
+
+/** Map backend canonical scenario IDs to UI scenario IDs */
+export function mapBackendScenarioToUI(backend: BackendScenario): UISenarioId {
+  switch (backend) {
+    case 'vendor': return 'vendor_pricing';
+    case 'job': return 'job_offer';
+    case 'budget': return 'project_budget';
+  }
+}
+
 export interface BackendVendorTerms {
   pricePerUnit: number;
   deliveryDays: number;
@@ -83,7 +104,8 @@ interface BackendRunResponse {
   rounds: number;
   final_terms: BackendTerms | null;
   satisfaction: Record<string, number>;
-  parties?: Array<{
+  personalities: Record<string, string>;
+  parties: Array<{
     id: string;
     role: string;
     personality: BackendPersonality;
@@ -389,7 +411,7 @@ async function postBackendNegotiation(
     let errorResponse: BackendErrorResponse;
     if (isRecord(payload) && 'error' in payload) {
       // Standardized error format
-      errorResponse = payload as BackendErrorResponse;
+      errorResponse = payload as unknown as BackendErrorResponse;
     } else if (isRecord(payload) && typeof payload.detail === 'string') {
       // Legacy format (fallback)
       errorResponse = {

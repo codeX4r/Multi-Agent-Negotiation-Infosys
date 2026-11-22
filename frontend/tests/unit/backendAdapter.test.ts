@@ -72,6 +72,12 @@ const response = {
   rounds: 2,
   final_terms: { price: 1100000, delivery_days: 25, warranty_months: 18, payment_days: 30 },
   satisfaction: { Vendor: 0.8, Buyer: 0.7 },
+  personalities: { Supplier: 'aggressive', Buyer: 'collaborative', Finance: 'risk_averse' },
+  parties: [
+    { id: 'vendor', role: 'Supplier', personality: 'aggressive', skill: 'skilled' },
+    { id: 'buyer', role: 'Buyer', personality: 'collaborative', skill: 'skilled' },
+    { id: 'finance', role: 'Finance', personality: 'risk_averse', skill: 'skilled' },
+  ],
   transcript: [
     {
       round: 0,
@@ -284,6 +290,12 @@ describe('backend adapter', () => {
       outcome: 'breakdown',
       outcome_reason: 'Finance rejected at round 3: payment terms were beyond their walk-away limit.',
       final_terms: null,
+      personalities: { Supplier: 'aggressive', Buyer: 'collaborative', Finance: 'risk_averse' },
+      parties: [
+        { id: 'vendor', role: 'Supplier', personality: 'aggressive', skill: 'skilled' },
+        { id: 'buyer', role: 'Buyer', personality: 'collaborative', skill: 'skilled' },
+        { id: 'finance', role: 'Finance', personality: 'risk_averse', skill: 'skilled' },
+      ],
       transcript: [
         response.transcript[0],
         response.transcript[1],
@@ -317,6 +329,12 @@ describe('backend adapter', () => {
       outcome: 'deadlock',
       outcome_reason: 'No agreement was reached within 12 rounds.',
       final_terms: null,
+      personalities: { Supplier: 'aggressive', Buyer: 'collaborative', Finance: 'risk_averse' },
+      parties: [
+        { id: 'vendor', role: 'Supplier', personality: 'aggressive', skill: 'skilled' },
+        { id: 'buyer', role: 'Buyer', personality: 'collaborative', skill: 'skilled' },
+        { id: 'finance', role: 'Finance', personality: 'risk_averse', skill: 'skilled' },
+      ],
     } satisfies Parameters<typeof adaptBackendResult>[0];
 
     const update = adaptBackendResult(deadlockResult, baseState, [vendor, buyer]);
@@ -339,6 +357,12 @@ describe('backend adapter', () => {
       rounds: 2,
       final_terms: { salary: 18, bonus: 1, start: 5, remote: 3 },
       satisfaction: { Candidate: 0.7, Recruiter: 0.6, 'Hiring Mgr': 0.7 },
+      personalities: { Candidate: 'collaborative', Recruiter: 'collaborative', 'Hiring Mgr': 'risk_averse' },
+      parties: [
+        { id: 'candidate', role: 'Candidate', personality: 'collaborative', skill: 'skilled' },
+        { id: 'recruiter', role: 'Recruiter', personality: 'collaborative', skill: 'skilled' },
+        { id: 'manager', role: 'Hiring Mgr', personality: 'risk_averse', skill: 'skilled' },
+      ],
       transcript: [
         {
           round: 0,
@@ -390,6 +414,12 @@ describe('backend adapter', () => {
         delivery_days: response.final_terms.delivery_days,
         warranty_months: response.final_terms.warranty_months,
       },
+      personalities: { Supplier: 'aggressive', Buyer: 'collaborative', Finance: 'risk_averse' },
+      parties: [
+        { id: 'vendor', role: 'Supplier', personality: 'aggressive', skill: 'skilled' },
+        { id: 'buyer', role: 'Buyer', personality: 'collaborative', skill: 'skilled' },
+        { id: 'finance', role: 'Finance', personality: 'risk_averse', skill: 'skilled' },
+      ],
       transcript: response.transcript.map((entry) => ({
         ...entry,
         offer: entry.offer && {
@@ -398,7 +428,7 @@ describe('backend adapter', () => {
           warranty_months: entry.offer.warranty_months,
         },
       })),
-    };
+    } as Parameters<typeof adaptBackendResult>[0];
 
     const update = adaptBackendResult(legacyResult, baseState, [vendor, buyer]);
 
