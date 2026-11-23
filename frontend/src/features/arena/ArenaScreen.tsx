@@ -12,7 +12,6 @@ import {
   BackendUnavailableError,
   buildBackendScenarioConfig,
   runBackendScenarioNegotiation,
-  mapUIScenarioToBackend,
 } from '@/lib/backendAdapter';
 import {
   formatOutcomeReason,
@@ -447,10 +446,20 @@ export function ArenaScreen() {
         }
 
         const draft = useConfigStore.getState().draft;
-        if (
-          draft.mode === 'simulation' &&
-          (draft.scenarioId === 'vendor_pricing' || draft.scenarioId === 'job_offer' || draft.scenarioId === 'project_budget')
-        ) {
+        const backendScenarioMap = {
+          vendor: 'vendor',
+          job: 'job',
+          budget: 'budget',
+          vendor_pricing: 'vendor',
+          job_offer: 'job',
+          project_budget: 'budget',
+        } as const;
+
+        const backendScenario = backendScenarioMap[
+          draft.scenarioId as keyof typeof backendScenarioMap
+        ];
+
+        if (draft.mode === 'simulation' && draft.scenarioId && backendScenario) {
           const participants = state?.agents ?? [];
           try {
             const engineConfig = useConfigStore.getState().buildEngineConfig(
@@ -459,7 +468,7 @@ export function ArenaScreen() {
             const backendConfig = buildBackendScenarioConfig(engineConfig);
             if (state && participants.length > 1) {
               const result = await runBackendScenarioNegotiation(
-                mapUIScenarioToBackend(draft.scenarioId),
+                backendScenario,
                 backendConfig,
                 controller.signal,
               );
