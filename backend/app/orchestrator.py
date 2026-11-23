@@ -1,8 +1,31 @@
-from .evaluation import evaluate_offer, first_issue_beyond_batna, utility
+﻿from .evaluation import evaluate_offer, first_issue_beyond_batna, utility
 from .scenarios import build_configured_agents, build_frontend_config, build_scenario
 from .messages import issue_for_terms, write_message
 from .models import NegotiationConfig, NegotiationContext, SCENARIO_ISSUES
+from .llm_wording import generate_wording
+def _message(
+    agent, decision, terms, scenario, transcript,
+    round_number, max_rounds, counter_index=0,
+    issue_index=None, deal_reached=False, current_offer=None
+):
+    wording = generate_wording(
+        agent=agent,
+        scenario=scenario,
+        decision=decision,
+        current_offer=current_offer or terms,
+        transcript=transcript,
+        round_number=round_number,
+        max_rounds=max_rounds,
+        approved_terms=terms if decision == "counter" else None,
+    )
 
+    if wording:
+        return wording
+
+    return write_message(
+        agent, decision, terms, counter_index,
+        issue_index, deal_reached=deal_reached
+    )
 
 def _run_configured_negotiation(config: NegotiationConfig, scenario: str) -> dict:
     agents = build_configured_agents(config)
@@ -69,18 +92,18 @@ def _run_configured_negotiation(config: NegotiationConfig, scenario: str) -> dic
                 and len(approvals | {speaker.id}) == len(agents)
             )
             entry = {
-                "round": round_no,
-                "speaker": speaker.role,
-                "speaker_id": speaker.id,
-                "decision": decision.decision,
-                "utility": decision.utility,
-                "message": write_message(
-                    speaker,
-                    decision.decision,
-                    on_table if decision.decision == "reject" else decision.counter_offer,
-                    counter_index,
-                    rejected_issue_index,
-                    deal_reached=deal_reached,
+                "message": _message(
+                 agent=speaker,
+                 decision=decision.decision,
+                 terms=on_table if decision.decision == "reject" else decision.counter_offer,
+                 scenario=scenario,
+                 transcript=transcript,
+                 round_number=round_no,
+                 max_rounds=config.rounds_limit,
+                 counter_index=counter_index,
+                 issue_index=rejected_issue_index,
+                 deal_reached=deal_reached,
+                 current_offer=on_table,
                 ),
                 "offer": decision.counter_offer.model_dump(exclude_none=True)
                 if decision.counter_offer else None,
@@ -259,11 +282,16 @@ def run_negotiation(scenario: str, opener_personality: str,
         entry = {
             "round": rnd, "speaker": speaker.role, "speaker_id": speaker.id, "decision": d.decision,
             "utility": d.utility,
-            "message": write_message(
-                speaker,
-                d.decision,
-                on_table if d.decision == "reject" else d.counter_offer,
-                counter_index,
+            "message": _message(
+                  agent=speaker,
+                  decision=d.decision,
+                  terms=on_table if d.decision == "reject" else d.counter_offer,
+                  scenario=scenario,
+                  transcript=transcript,
+                  round_number=rnd,
+                  max_rounds=max_rounds,
+                  counter_index=counter_index,
+                  current_offer=on_table,
             ),
             "offer": d.counter_offer.model_dump(exclude_none=True) if d.counter_offer else None,
             "reasoning": d.reasoning,
