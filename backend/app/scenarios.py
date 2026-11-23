@@ -49,7 +49,39 @@ def build_frontend_config(
     party_personalities: dict[str, str] | None = None,
     party_skills: dict[str, str] | None = None,
 ) -> NegotiationConfig:
-    if scenario == "job":
+    if scenario == "vendor":
+        issues = [
+            {"id": "price", "min": 900000, "max": 1300000, "step": 10000},
+            {"id": "delivery", "min": 10, "max": 45, "step": 1},
+            {"id": "warranty", "min": 6, "max": 36, "step": 6},
+            {"id": "payment", "min": 0, "max": 60, "step": 15},
+        ]
+        parties = [
+            {
+                "id": "vendor", "role": "Supplier",
+                "personality": "aggressive", "skill": "skilled",
+                "target": {"price": 1250000, "delivery": 40, "warranty": 6, "payment": 0},
+                "walk_away": {"price": 980000, "delivery": 12, "warranty": 30, "payment": 60},
+                "weights": {"price": 0.5, "delivery": 0.15, "warranty": 0.2, "payment": 0.15},
+            },
+            {
+                "id": "buyer", "role": "Buyer",
+                "personality": "collaborative", "skill": "skilled",
+                "target": {"price": 950000, "delivery": 15, "warranty": 24, "payment": 60},
+                "walk_away": {"price": 1180000, "delivery": 40, "warranty": 6, "payment": 0},
+                "weights": {"price": 0.45, "delivery": 0.25, "warranty": 0.2, "payment": 0.1},
+            },
+            {
+                "id": "finance", "role": "Finance",
+                "personality": "risk_averse", "skill": "expert",
+                "target": {"price": 950000, "delivery": 20, "warranty": 24, "payment": 60},
+                "walk_away": {"price": 1150000, "delivery": 45, "warranty": 6, "payment": 15},
+                "weights": {"price": 0.5, "delivery": 0, "warranty": 0.2, "payment": 0.3},
+            },
+        ]
+        opener_id = "vendor"
+        responder_id = "buyer"
+    elif scenario == "job":
         issues = [
             {"id": "salary", "min": 12, "max": 24, "step": 0.5},
             {"id": "bonus", "min": 0, "max": 3, "step": 0.25},
@@ -114,7 +146,7 @@ def build_frontend_config(
         opener_id = "eng"
         responder_id = "mkt"
     else:
-        raise ValueError("frontend config is available for job and budget scenarios")
+        raise ValueError(f"frontend config is available for vendor, job, and budget scenarios (got: {scenario})")
 
     personalities = party_personalities or {}
     skills = party_skills or {}

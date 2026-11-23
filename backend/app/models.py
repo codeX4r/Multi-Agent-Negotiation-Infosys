@@ -60,6 +60,12 @@ class NegotiationParty(BaseModel):
     walk_away: dict[str, FiniteFloat]
     weights: dict[str, FiniteFloat] = Field(default_factory=dict)
 
+    @model_validator(mode="after")
+    def validate_personality_format(self):
+        if self.personality == "risk-averse":
+            raise ValueError("Use 'risk_averse' (underscore), not 'risk-averse'")
+        return self
+
 
 class NegotiationConfig(BaseModel):
     parties: list[NegotiationParty] = Field(min_length=2, max_length=5)
