@@ -1,4 +1,4 @@
-from .models import AgentProfile, IssueTermField, NegotiationConfig, Terms
+from app.models import AgentProfile, IssueTermField, NegotiationConfig, Terms
 
 
 def build_configured_agents(config: NegotiationConfig) -> list[AgentProfile]:

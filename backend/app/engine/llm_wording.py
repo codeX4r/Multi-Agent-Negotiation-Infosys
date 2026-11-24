@@ -6,7 +6,7 @@ import json
 from llm_wording_engine import WordingEngine
 from llm_wording_engine.schema import Issue
 
-from .models import AgentProfile, IssueTermField
+from app.models import AgentProfile, IssueTermField
 
 
 _ENGINE = None

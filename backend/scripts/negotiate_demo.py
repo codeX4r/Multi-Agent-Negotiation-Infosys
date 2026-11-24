@@ -1,5 +1,5 @@
 from app.models import AgentProfile, Terms
-from app.evaluation import evaluate_offer
+from app.engine.evaluation import evaluate_offer
 
 MAX_ROUNDS = 12
 

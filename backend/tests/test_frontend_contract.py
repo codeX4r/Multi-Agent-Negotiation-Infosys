@@ -1,10 +1,10 @@
 import unittest
 from pydantic import ValidationError
 
-from app.orchestrator import run_negotiation
-from app.messages import format_terms
+from app.engine.orchestrator import run_negotiation
+from app.engine.messages import format_terms
 from app.models import Terms
-from app.scenarios import build_frontend_config, build_scenario
+from app.engine.scenarios import build_frontend_config, build_scenario
 
 
 SCENARIO_RANGES = {
