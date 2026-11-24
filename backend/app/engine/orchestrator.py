@@ -1,7 +1,7 @@
 from .evaluation import evaluate_offer, first_issue_beyond_batna, utility
 from .scenarios import build_configured_agents, build_frontend_config, build_scenario
 from .messages import issue_for_terms, write_message
-from .models import NegotiationConfig, NegotiationContext, SCENARIO_ISSUES
+from app.models import NegotiationConfig, NegotiationContext, SCENARIO_ISSUES
 
 
 def _run_configured_negotiation(config: NegotiationConfig, scenario: str) -> dict:

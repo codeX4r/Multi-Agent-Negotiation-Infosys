@@ -1,10 +1,10 @@
 import unittest
 from unittest.mock import patch
 
-from app.messages import write_message
+from app.engine.messages import write_message
 from app.models import Decision
-from app.orchestrator import run_negotiation
-from app.scenarios import build_frontend_config, build_scenario
+from app.engine.orchestrator import run_negotiation
+from app.engine.scenarios import build_frontend_config, build_scenario
 
 
 class MessageTests(unittest.TestCase):
@@ -73,7 +73,7 @@ class MessageTests(unittest.TestCase):
         )
         accepted = Decision(decision="accept", utility=1, reasoning="The offer works.")
 
-        with patch("app.orchestrator.evaluate_offer", return_value=accepted):
+        with patch("app.engine.orchestrator.evaluate_offer", return_value=accepted):
             result = run_negotiation("job", "collaborative", "collaborative", 3, config)
 
         acceptance_messages = [

@@ -2,11 +2,11 @@ import itertools
 import unittest
 from pydantic import ValidationError
 
-from app.evaluation import _beyond_batna, _concede, utility
+from app.engine.evaluation import _beyond_batna, _concede, utility
 from app.models import NegotiationConfig, Terms
-from app.main import RunRequest
-from app.orchestrator import run_negotiation
-from app.scenarios import build_scenario
+from app.schemas.negotiation import RunRequest
+from app.engine.orchestrator import run_negotiation
+from app.engine.scenarios import build_scenario
 
 
 SCENARIOS = ("vendor", "job", "budget")

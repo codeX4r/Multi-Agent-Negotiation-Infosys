@@ -1,4 +1,4 @@
-﻿from .models import AgentProfile, Terms
+﻿from app.models import AgentProfile, Terms
 
 TONE = {
     "aggressive": {"open": "This is my position, and it is firm.",
