@@ -5,6 +5,7 @@ from app.engine.evaluation import evaluate_offer, utility, _beyond_batna, first_
 from app.engine.messages import write_message, format_terms, issue_for_terms
 from app.engine.scenarios import build_configured_agents, build_frontend_config, build_scenario
 from app.engine.llm_wording import generate_wording
+from app.engine.llm_provider import LLMProvider, ProviderConfig, create_provider
 
 __all__ = [
     "run_negotiation",
@@ -20,4 +21,7 @@ __all__ = [
     "build_frontend_config",
     "build_scenario",
     "generate_wording",
+    "LLMProvider",
+    "ProviderConfig",
+    "create_provider",
 ]
