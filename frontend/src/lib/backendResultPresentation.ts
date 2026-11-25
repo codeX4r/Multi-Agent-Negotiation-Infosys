@@ -1,5 +1,5 @@
 export type BackendResultOutcome = 'deal' | 'breakdown' | 'deadlock';
-export type BackendDecision = 'open' | 'counter' | 'accept' | 'reject';
+export type BackendDecision = 'open' | 'counter' | 'accept' | 'reject' | 'message' | 'walk';
 
 export function getOutcomeTitle(outcome: BackendResultOutcome): string {
   switch (outcome) {

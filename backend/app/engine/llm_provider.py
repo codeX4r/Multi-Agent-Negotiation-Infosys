@@ -53,8 +53,13 @@ class _ProviderWrapper:
 
 
 def _resolve_env_vars(config: ProviderConfig) -> ProviderConfig:
-    """Resolve environment variables into config, with new vars taking priority."""
-    # New standard env vars
+    """Resolve environment variables into config, with new vars taking priority.
+
+    Note: We do NOT mutate os.environ globally. Instead, we read existing env vars
+    and pass configuration directly to make_client. The make_client() function reads
+    os.environ directly, so callers must ensure the appropriate env vars are set.
+    """
+    # New standard env vars (read only, do not mutate)
     provider = os.environ.get("LLM_PROVIDER", config.provider)
     model = os.environ.get("LLM_MODEL", config.model)
     api_key = os.environ.get("LLM_API_KEY", config.api_key)
@@ -62,35 +67,33 @@ def _resolve_env_vars(config: ProviderConfig) -> ProviderConfig:
     temperature_str = os.environ.get("LLM_TEMPERATURE")
     temperature = float(temperature_str) if temperature_str else config.temperature
 
-    # Backward compatibility: map new vars to old ones expected by make_client
-    if provider != "auto" and provider != "offline":
-        # Set the old env vars that make_client expects
-        if provider == "gemini" and api_key:
-            os.environ.setdefault("GEMINI_API_KEY", api_key)
-        elif provider == "claude" and api_key:
-            os.environ.setdefault("ANTHROPIC_API_KEY", api_key)
-        elif provider == "openai" and api_key:
-            os.environ.setdefault("OPENAI_API_KEY", api_key)
-        elif provider == "ollama" and base_url:
-            os.environ.setdefault("OLLAMA_HOST", base_url)
+    # Backward compatibility: determine old env var names from new config
+    # make_client() reads os.environ directly, so callers must ensure appropriate vars are set
+    old_api_key = None
+    old_model = None
+    old_base_url = None
 
-    if model:
-        # Set model-specific env vars
-        if provider == "gemini" or (provider == "auto" and "GEMINI_API_KEY" in os.environ):
-            os.environ.setdefault("GEMINI_MODEL", model)
-        elif provider == "claude" or (provider == "auto" and "ANTHROPIC_API_KEY" in os.environ):
-            os.environ.setdefault("CLAUDE_MODEL", model)
-        elif provider == "openai" or (provider == "auto" and "OPENAI_API_KEY" in os.environ):
-            os.environ.setdefault("OPENAI_MODEL", model)
-        elif provider == "ollama":
-            os.environ.setdefault("OLLAMA_MODEL", model)
+    # Map new provider to corresponding old API key env var
+    if provider == "gemini":
+        old_api_key = os.environ.get("GEMINI_API_KEY")
+        old_model = os.environ.get("GEMINI_MODEL")
+    elif provider == "claude":
+        old_api_key = os.environ.get("ANTHROPIC_API_KEY")
+        old_model = os.environ.get("CLAUDE_MODEL")
+    elif provider == "openai":
+        old_api_key = os.environ.get("OPENAI_API_KEY")
+        old_model = os.environ.get("OPENAI_MODEL")
+    elif provider == "ollama":
+        old_base_url = os.environ.get("OLLAMA_HOST")
+        old_model = os.environ.get("OLLAMA_MODEL")
 
+    # Return config with resolved values - callers must ensure appropriate env vars are set
     return ProviderConfig(
         provider=provider,
-        model=model,
+        model=model if model else old_model,
         temperature=temperature,
-        api_key=api_key,
-        base_url=base_url,
+        api_key=api_key if api_key else old_api_key,
+        base_url=base_url if base_url else old_base_url,
     )
 
 

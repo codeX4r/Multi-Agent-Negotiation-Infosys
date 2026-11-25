@@ -14,6 +14,14 @@ CONCESSION_RATE = {
     "risk_averse": 0.15,
 }
 
+# Base pressure per climate — higher pressure makes agents concede faster.
+# Mirrors the frontend CLIMATES table (stable/volatile/crisis).
+CLIMATE_PRESSURE = {
+    "stable": 0.12,
+    "volatile": 0.32,
+    "crisis": 0.55,
+}
+
 
 def _score(value: float, worst: float, best: float) -> float:
     """Scale a value to 0..1 where 0 = walk-away point and 1 = ideal."""
@@ -121,11 +129,13 @@ def _concede(
     max_rounds: int,
     issues: list[NegotiationIssue] | None = None,
     constraint: SumConstraint | None = None,
+    climate: str = "volatile",
 ) -> Terms:
     """Move the agent's own position toward its walk-away point."""
     rate = CONCESSION_RATE[agent.personality]
     pressure = 1 + (round_no / max_rounds)      # concede faster as time runs out
-    step = min(1.0, rate * pressure)
+    climate_pressure = 1 + CLIMATE_PRESSURE.get(climate, 0.32)  # crisis gives more ground per step
+    step = min(1.0, rate * pressure * climate_pressure)
 
     if issues is not None:
         values = {}
@@ -227,7 +237,8 @@ def evaluate_offer(agent: AgentProfile, incoming: Terms, my_last: Terms | None,
                    round_no: int, max_rounds: int = 12, *,
                    context: NegotiationContext | None = None,
                    issues: list[NegotiationIssue] | None = None,
-                   constraint: SumConstraint | None = None) -> Decision:
+                   constraint: SumConstraint | None = None,
+                   climate: str = "volatile") -> Decision:
     if context is not None:
         incoming = context.current_offer
         my_last = context.previous_offer
@@ -242,7 +253,7 @@ def evaluate_offer(agent: AgentProfile, incoming: Terms, my_last: Terms | None,
             return Decision(decision="reject", utility=u,
                             reasoning="Offer is worse than my walk-away point and time is up.")
         mine = _concede(
-            agent, my_last or agent.target, round_no, max_rounds, issues, constraint
+            agent, my_last or agent.target, round_no, max_rounds, issues, constraint, climate
         )
         return Decision(decision="counter", utility=u, counter_offer=mine,
                         reasoning=f"Offer is outside my limits (utility {u}). Countering with a small concession.")
@@ -258,7 +269,7 @@ def evaluate_offer(agent: AgentProfile, incoming: Terms, my_last: Terms | None,
                         reasoning=f"Utility {u} meets my threshold {round(threshold, 2)}. Accepting.")
 
     mine = _concede(
-        agent, my_last or agent.target, round_no, max_rounds, issues, constraint
+        agent, my_last or agent.target, round_no, max_rounds, issues, constraint, climate
     )
     return Decision(decision="counter", utility=u, counter_offer=mine,
                     reasoning=f"Utility {u} is below my threshold {round(threshold, 2)}. Countering.")

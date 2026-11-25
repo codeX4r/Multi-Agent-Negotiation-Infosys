@@ -55,6 +55,7 @@ def generate_wording(
     round_number: int,
     max_rounds: int,
     approved_terms=None,
+    deal_reached: bool = False,
 ):
     """Return an LLM-generated public message, or None if integration fails."""
 
@@ -108,6 +109,7 @@ def generate_wording(
                 "offer": item.get("offer"),
                 "decision": item.get("decision"),
                 "round": item.get("round"),
+                "deal_reached": item.get("deal_reached", False),
             })
 
         # Include the opening offer in history for the first turn.
@@ -118,6 +120,7 @@ def generate_wording(
                 "offer": current_offer.model_dump(exclude_none=True),
                 "decision": "open",
                 "round": 0,
+                "deal_reached": False,
             })
 
         offer_by = None
@@ -176,6 +179,7 @@ def generate_wording(
             "round": round_number,
             "max_rounds": max_rounds,
             "decision_hint": None if decision == "open" else decision,
+            "deal_reached": deal_reached,
         }
 
         result = _get_engine().reason_dict(request)

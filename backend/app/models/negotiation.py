@@ -76,6 +76,9 @@ class NegotiationConfig(BaseModel):
     rounds_limit: int = Field(ge=1, le=100)
     deadlock_after_stalled_rounds: int = Field(ge=1, le=100)
     constraint: SumConstraint | None = None
+    climate: Literal["stable", "volatile", "crisis"] = "volatile"
+    event_frequency: int = Field(default=2, ge=0, le=10)
+    orchestrator_autonomy: int = Field(default=2, ge=0, le=3)
 
     @model_validator(mode="after")
     def validate_configuration(self):

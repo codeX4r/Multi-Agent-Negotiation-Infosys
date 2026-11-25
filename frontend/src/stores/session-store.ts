@@ -82,7 +82,7 @@ const defaultState = {
   deadlockStalled: 0,
   agreementLikelihood: 0,
   agentStates: new Map(),
-  innerVoiceText: 'Waiting for the first move…',
+  innerVoiceText: 'Negotiation in progress. Notes on each move will appear here.',
   currentSpeaker: null,
   replayTurn: 0,
   replayPlaying: false,

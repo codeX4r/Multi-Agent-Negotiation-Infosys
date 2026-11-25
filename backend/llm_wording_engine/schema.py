@@ -47,7 +47,7 @@ class AgentProfile:
     goals: List[str] = field(default_factory=list)
     constraints: List[str] = field(default_factory=list)
     issues: List[Issue] = field(default_factory=list)
-    batna: str = ""                  # text description of the walk-away alternative
+    batna: str = "Your walk-away alternative is defined by your limits."  # text description of the walk-away alternative
     batna_utility: float = 0.3       # value 0..1 below which a deal is worse than walking away
 
     def __post_init__(self) -> None:
@@ -73,6 +73,12 @@ class Turn:
     offer: Optional[Dict[str, float]] = None
     decision: Optional[str] = None
     round: Optional[int] = None
+    deal_reached: bool = False
+
+    def __post_init__(self):
+        # Ensure deal_reached is always present for backward compatibility
+        if self.deal_reached is None:
+            self.deal_reached = False
 
 
 @dataclass
@@ -87,6 +93,8 @@ class WordingRequest:
     # Optional: decision already made by an external evaluator. When given, the
     # LLM only explains and phrases it; it does not override it.
     decision_hint: Optional[str] = None
+    # Optional: whether this accept decision finalizes the deal (all parties agreed)
+    deal_reached: bool = False
 
     @staticmethod
     def from_dict(d: Dict[str, Any]) -> "WordingRequest":
@@ -97,7 +105,8 @@ class WordingRequest:
         return WordingRequest(agent=agent, scenario=d.get("scenario", ""), history=hist,
                                 offer_on_table=d.get("offer_on_table"), offer_by=d.get("offer_by"),
                                 round=d.get("round", 1), max_rounds=d.get("max_rounds", 10),
-                                decision_hint=d.get("decision_hint"))
+                                decision_hint=d.get("decision_hint"),
+                                deal_reached=d.get("deal_reached", False))
 
 
 @dataclass

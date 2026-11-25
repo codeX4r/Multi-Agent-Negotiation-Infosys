@@ -66,7 +66,7 @@ describe('Orchestrator', () => {
       expect(state).not.toBeNull();
       expect(state.round).toBe(1);
       expect(state.maxRounds).toBe(12);
-      expect(state.status).toBe('running');
+      expect(state.status).toBe('idle');
       expect(state.agents).toHaveLength(3);
       expect(state.turnIdx).toBe(0);
       expect(state.pressure).toBeCloseTo(0.32, 2); // volatile climate pressure
@@ -106,6 +106,12 @@ describe('Orchestrator', () => {
   });
 
   describe('Step Function', () => {
+    beforeEach(() => {
+      // Set status to running for step function tests
+      const state = (engine as any).state;
+      state.status = 'running';
+    });
+
     it('advances turn on each step', async () => {
       const state = (engine as any).state;
       const initialTurn = state.turnCount;
@@ -157,6 +163,12 @@ describe('Orchestrator', () => {
   });
 
   describe('Round Start', () => {
+    beforeEach(() => {
+      // Set status to running for round start tests
+      const state = (engine as any).state;
+      state.status = 'running';
+    });
+
     it('increases pressure after round advances', async () => {
       const state = (engine as any).state;
       const initialPressure = state.pressure;
@@ -300,6 +312,12 @@ describe('Orchestrator', () => {
   });
 
   describe('End Conditions', () => {
+    beforeEach(() => {
+      // Set status to running for end condition tests
+      const state = (engine as any).state;
+      state.status = 'running';
+    });
+
     it('detects deal when all accept', async () => {
       const state = (engine as any).state;
       state.table = { by: 'buyer', x: { price: 1100000, delivery: 25, warranty: 12, payment: 30 }, round: 1, turn: 1 };
@@ -398,6 +416,12 @@ describe('Orchestrator', () => {
   });
 
   describe('Human Actions', () => {
+    beforeEach(() => {
+      // Set status to running for human action tests
+      const state = (engine as any).state;
+      state.status = 'running';
+    });
+
     it('rejects walk away', async () => {
       const state = (engine as any).state;
       state.waitingHuman = true;

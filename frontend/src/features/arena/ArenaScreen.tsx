@@ -414,7 +414,7 @@ export function ArenaScreen() {
   } = useUIStore();
 
   const { engineState, transcript, tableOffer, concessionLines, stanceBars,
-    zopaOverlap, deadlockRisk, agreementLikelihood, currentSpeaker } = useSessionStore();
+    zopaOverlap, deadlockRisk, agreementLikelihood, currentSpeaker, replayPlaying } = useSessionStore();
 
   const { initialize, togglePlay, stepOnce, togglePause, sendMessage,
     acceptOffer, walkAway, suggestConcession,
@@ -439,9 +439,8 @@ export function ArenaScreen() {
         const state = useSessionStore.getState().engineState;
 
         if (state?.agents.some((agent) => agent.human)) {
-          // Practice: run until the human's turn.
-          setArenaPlaying(true);
-          runLoop(true);
+          // Practice mode: just initialize, wait for user to press Play
+          // The human turn will be triggered when user presses Play
           return;
         }
 
@@ -459,45 +458,9 @@ export function ArenaScreen() {
           draft.scenarioId as keyof typeof backendScenarioMap
         ];
 
-        if (draft.mode === 'simulation' && draft.scenarioId && backendScenario) {
-          const participants = state?.agents ?? [];
-          try {
-            const engineConfig = useConfigStore.getState().buildEngineConfig(
-              getScenario(draft.scenarioId),
-            );
-            const backendConfig = buildBackendScenarioConfig(engineConfig);
-            if (state && participants.length > 1) {
-              const result = await runBackendScenarioNegotiation(
-                backendScenario,
-                backendConfig,
-                controller.signal,
-              );
-              if (cancelled) return;
-
-              const update = adaptBackendResult(result, state, participants);
-              const session = useSessionStore.getState();
-              session.setEngineState(update.state);
-              session.setTranscript(update.transcript);
-              session.setTableOffer(update.tableOffer);
-              session.setCurrentSpeaker(update.transcript.at(-1)?.by ?? null);
-              setArenaPlaying(false);
-              setArenaPaused(false);
-              return;
-            } else {
-              showToast('The backend setup needs at least two configured parties; using the local simulation.');
-            }
-          } catch (error) {
-            if (cancelled) return;
-            showToast(
-              error instanceof BackendUnavailableError
-                ? 'FastAPI is unreachable; using the scripted simulation.'
-                : `Backend negotiation failed: ${error instanceof Error ? error.message : 'Unknown error'}. Using the scripted simulation.`,
-            );
-          }
-        }
-
-        // Simulation fallback when the backend is unavailable or unsupported.
-        togglePlay(true);
+        // In simulation mode, we DO NOT auto-run the backend or local simulation.
+        // The user must explicitly press Play to start the negotiation.
+        // Backend/local simulation will be started in togglePlay() when user clicks Play.
       } catch {
         // initialize() already displays the error.
       }
@@ -531,11 +494,15 @@ export function ArenaScreen() {
   /* ── Start the simulation loop once initialised (simulation mode only) ──
      In practice mode the loop is driven by user input.
   */
+  const autoStartedRef = useRef(false);
   useEffect(() => {
-    if (engineState && isSim && engineState.status === 'running' && !arenaPlaying) {
-      // Don't auto-start — user must press Play
+    if (engineState && isSim && engineState.status === 'running' && !replayPlaying && !autoStartedRef.current) {
+      // Auto-start once; the manual Play button drives subsequent runs.
+      autoStartedRef.current = true;
+      togglePlay();
     }
-  }, [engineState, isSim, arenaPlaying]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [engineState, isSim, replayPlaying, togglePlay]);
 
   /* ── Keyboard shortcuts: Space → play/pause, N → next turn ── */
   useEffect(() => {
@@ -627,13 +594,17 @@ export function ArenaScreen() {
                   ? 'live'
                   : engineState.status === 'deal'
                     ? 'live'
-                    : 'bad'
+                    : engineState.status === 'idle'
+                      ? 'info'
+                      : 'bad'
                   }`}
                 id="a-status"
               >
                 {engineState.status === 'running' && !arenaPaused
                   ? 'Live'
-                  : backendOutcomeTitle ?? (engineState.status === 'deal' ? 'Deal reached' : 'No deal')}
+                  : engineState.status === 'idle'
+                    ? 'Ready'
+                    : backendOutcomeTitle ?? (engineState.status === 'deal' ? 'Deal reached' : 'No deal')}
               </span>
               <span className="pill" id="a-mode">
                 {isSim ? 'Simulation' : 'Practice'}
@@ -728,6 +699,7 @@ export function ArenaScreen() {
                 showToast('The session is still running. Walk away or wait for a decision.');
               }
             }}
+            disabled={engineState.status === 'idle'}
           >
             Finish
           </button>
@@ -796,7 +768,9 @@ export function ArenaScreen() {
               <div className="transcript" id="transcript">
                 {transcript.length === 0 && (
                   <div className="msg sys">
-                    Waiting for the first move…
+                    {engineState.status === 'idle'
+                      ? 'Ready to negotiate. Press Play to begin.'
+                      : 'Waiting for the first move…'}
                   </div>
                 )}
                 {transcript.map((entry, i) => (
@@ -1056,8 +1030,9 @@ export function ArenaScreen() {
                     className="btn primary"
                     id="playbtn"
                     onClick={() => togglePlay()}
+                    disabled={engineState.status === 'deal' || engineState.status === 'breakdown'}
                   >
-                    {arenaPlaying ? 'Pause' : 'Play'}
+                    {engineState.status === 'idle' ? 'Start Negotiation' : arenaPlaying ? 'Pause' : 'Play'}
                   </button>
                   <button className="btn" onClick={() => stepOnce()}>
                     Next turn

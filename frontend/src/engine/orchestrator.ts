@@ -16,7 +16,8 @@ import type {
   DeadlockState,
   UtilityHistory,
   OrchestratorRole,
-  AutonomyLevel
+  AutonomyLevel,
+  SessionStatus
 } from './types';
 import { clamp, clone, r2 } from './types';
 
@@ -107,7 +108,7 @@ export class NegotiationEngine {
       },
       transcript: [],
       uHist: [],
-      status: 'running',
+      status: 'running', // Match prototype: start running immediately
       roundStarted: false,
       waitingHuman: false,
       blocked: false,
@@ -803,7 +804,7 @@ export class NegotiationEngine {
     return result;
   }
 
-  private end(status: 'deal' | 'breakdown', reason: string): void {
+  private end(status: SessionStatus, reason: string): void {
     const S = this.state!;
     if (S.status !== 'running') return;
     S.status = status;
@@ -931,6 +932,80 @@ export class NegotiationEngine {
 
     return { deal, reason: S.endReason, rounds: Math.min(S.round, S.maxRounds), turns: S.turnCount, terms: S.table ? S.table.x : null, per, firstGiver: givers[0] || null, most, turning: topTurning, habits: habits.slice(0, 2), joint, nash, events: S.events.length, risk: S.deadlock.riskHist };
   }
+}
+
+// ============================================================================
+// Metrics Computation (ported from prototype's renderMetrics)
+// ============================================================================
+
+export function computeConcessionLines(
+  state: SimulationState,
+  scenario: Scenario
+): Array<{ agentId: string; values: (number | null)[] }> {
+  const H = state.uHist;
+  const lines: Array<{ agentId: string; values: (number | null)[] }> = [];
+
+  for (const agent of state.agents) {
+    const vals = H.map(p => {
+      if (p.x) {
+        return utility(agent, p.x, scenario);
+      }
+      return null;
+    });
+    lines.push({ agentId: agent.id, values: vals });
+  }
+
+  return lines;
+}
+
+export function computeStanceBars(
+  state: SimulationState,
+  scenario: Scenario
+): Array<{ agentId: string; target: number }> {
+  return state.agents.map(agent => ({
+    agentId: agent.id,
+    target: target(agent, state)
+  }));
+}
+
+export function computeZopaOverlap(
+  state: SimulationState,
+  scenario: Scenario
+): number {
+  if (!state.table) return 0;
+
+  const parts = state.agents.map(agent => {
+    const T = target(agent, state);
+    const u = utility(agent, state.table!.x, scenario);
+    const denom = Math.max(0.05, T - agent.batnaU);
+    return clamp((u - agent.batnaU) / denom, 0, 1);
+  });
+
+  return parts.reduce((s, v) => s + v, 0) / parts.length;
+}
+
+export function computeAgreementLikelihood(
+  state: SimulationState,
+  scenario: Scenario
+): number {
+  if (state.status === 'deal') return 1;
+  if (state.status === 'breakdown') return 0;
+
+  const m = computeMargin(state, scenario);
+  const prog = progress(state);
+  const al = 1 / (1 + Math.exp(-(m * 6 + 1.6 + prog * 1.6 - state.deadlock.stalled * 0.4)));
+  return clamp(al, 0, 1);
+}
+
+export function computeMargin(
+  state: SimulationState,
+  scenario: Scenario
+): number {
+  if (!state.table) return -0.6;
+  return Math.min(...state.agents
+    .filter(a => a.id !== state.table!.by)
+    .map(a => utility(a, state.table!.x, scenario) - target(a, state))
+  );
 }
 
 // Helper function

@@ -7,10 +7,45 @@ import type {
 } from '@/engine/types';
 import { formatTurnReason } from '@/lib/backendResultPresentation';
 
-export type BackendDecision = 'open' | 'counter' | 'accept' | 'reject';
+export type BackendDecision = 'open' | 'counter' | 'accept' | 'reject' | 'message' | 'walk';
 export type BackendOutcome = 'deal' | 'breakdown' | 'deadlock';
 type BackendPersonality = 'aggressive' | 'collaborative' | 'risk_averse';
 export type BackendScenario = 'vendor' | 'job' | 'budget';
+
+export interface WordingRequest {
+  agent: {
+    id: string;
+    role: string;
+    personality: BackendPersonality;
+    skill: Agent['skill'];
+    wants_higher_price: boolean;
+    target: Record<string, number>;
+    walk_away: Record<string, number>;
+    weights: Record<string, number>;
+  };
+  scenario: BackendScenario;
+  decision: BackendDecision;
+  current_offer: Record<string, number> | null;
+  transcript: Array<{
+    speaker: string;
+    message: string;
+    offer: Record<string, number> | null;
+    decision: BackendDecision;
+    round: number;
+    deal_reached?: boolean;
+  }>;
+  round_number: number;
+  max_rounds: number;
+  deal_reached?: boolean;
+  approved_terms?: Record<string, number>;
+}
+
+export interface WordingResponse {
+  message: string | null;
+  source: 'llm' | 'fallback';
+  provider: string | null;
+  model: string | null;
+}
 
 // Frontend UI scenario IDs (for display)
 export type UISenarioId = 'vendor_pricing' | 'job_offer' | 'project_budget';
@@ -129,6 +164,9 @@ export interface BackendScenarioConfig {
   rounds_limit: number;
   deadlock_after_stalled_rounds: number;
   constraint?: { type: 'sum'; total: number; derived: string; of: string[] };
+  climate?: 'stable' | 'volatile' | 'crisis';
+  event_frequency?: number;
+  orchestrator_autonomy?: number;
 }
 
 export type BackendVendorConfig = BackendScenarioConfig;
@@ -217,6 +255,9 @@ export function buildBackendScenarioConfig(engineConfig: EngineConfig): BackendS
     opener_id: openerId,
     rounds_limit: engineConfig.rounds,
     deadlock_after_stalled_rounds: engineConfig.deadlockN,
+    climate: engineConfig.climate,
+    event_frequency: engineConfig.eventFreq,
+    orchestrator_autonomy: engineConfig.orchestrator.autonomy,
     ...(engineConfig.scenarioDef.constraint
       ? { constraint: engineConfig.scenarioDef.constraint }
       : {}),
@@ -602,4 +643,55 @@ export function adaptBackendResult(
   };
 
   return { state, transcript, tableOffer };
+}
+
+// ─── LLM Wording API ───
+
+export async function getBackendWording(
+  request: WordingRequest,
+  signal?: AbortSignal,
+): Promise<WordingResponse> {
+  let response: Response;
+  try {
+    response = await fetch(`${API_URL}/negotiate/wording`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+      signal,
+      cache: 'no-store',
+    });
+  } catch (error) {
+    if (signal?.aborted) throw error;
+    throw new BackendUnavailableError();
+  }
+
+  let payload: unknown;
+  try {
+    payload = await response.json();
+  } catch {
+    throw new BackendApiError(response.status, {
+      error: 'parse_error',
+      message: 'FastAPI returned a response that was not valid JSON.',
+    });
+  }
+
+  if (!response.ok) {
+    let errorResponse: BackendErrorResponse;
+    if (isRecord(payload) && 'error' in payload) {
+      errorResponse = payload as unknown as BackendErrorResponse;
+    } else if (isRecord(payload) && typeof payload.detail === 'string') {
+      errorResponse = {
+        error: 'http_error',
+        message: payload.detail,
+      };
+    } else {
+      errorResponse = {
+        error: 'http_error',
+        message: `FastAPI request failed (${response.status}).`,
+      };
+    }
+    throw new BackendApiError(response.status, errorResponse);
+  }
+
+  return payload as WordingResponse;
 }

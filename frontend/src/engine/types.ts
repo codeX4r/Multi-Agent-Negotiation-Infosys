@@ -14,7 +14,7 @@ export type OrchestratorRole = 'timekeeper' | 'mediator' | 'enforcer' | 'injecto
 export type AutonomyLevel = 0 | 1 | 2 | 3;
 export type IssueKind = 'inr' | 'days' | 'net' | 'months' | 'lpa' | 'lakh' | 'weeks' | 'dpw' | 'share' | 'num';
 export type NegotiationMode = 'simulation' | 'practice';
-export type SessionStatus = 'running' | 'deal' | 'breakdown';
+export type SessionStatus = 'idle' | 'running' | 'deal' | 'breakdown';
 
 export interface Personality {
   label: string;
