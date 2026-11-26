@@ -12,10 +12,10 @@ One call per agent turn. Pass the existing engine's decision as `decision_hint` 
 
 ```
 WordingRequest  ──►  WordingEngine.reason()  ──►  WordingResult
- (persona, goals,         builds the prompt,          decision: accept | counter | reject
-  private limits,         calls the LLM,              reasoning: private, why it decided this
-  full history,           parses JSON,                message: what it says at the table
-  offer on table)         applies guardrails          offer: proposed terms, within its own limits
+ (persona, goals,          builds the prompt,            decision: accept | counter | reject
+  private limits,          calls the LLM,                reasoning: private, why it decided this
+  full history,            parses JSON,                  message: what it says at the table
+  offer on table)          applies guardrails            offer: proposed terms, within its own limits
 ```
 
 | File | Purpose |
@@ -24,80 +24,31 @@ WordingRequest  ──►  WordingEngine.reason()  ──►  WordingResult
 | `prompts.py` | Persona prompts for aggressive, collaborative and risk-averse agents, with goals, constraints, private limits and the full conversation history. |
 | `llm_client.py` | One interface for Gemini, Claude, OpenAI and Ollama (local). Retries on rate limits and timeouts with live progress. Picks a fast current Gemini model automatically (`gemini-flash-lite-latest`). |
 | `safety.py` | Guardrails: the model can never propose terms beyond the agent's own limits or accept below its walk-away point. Invalid values are clamped and snapped, and every correction is logged. |
+| `memory.py` | Phrase memory: the offline writer learns from every good online run (see below). |
 | `schema.py` | The input and output contract (plain dataclasses, dict in and out). |
 | `sample_scenarios.py` | Sample agents for vendor pricing, job offer and project budget, from the Milestone 1.3 templates. |
 | `demo.py` | Recordable demo: one offer worded by three personalities, then a live exchange per scenario. Saves every run to `llm_wording_engine/runs/`. |
-| `tests/` | 30 pytest tests: JSON parsing, prompt content, guardrails, fallbacks, all 3 scenarios × 3 personalities, and provider wiring against a fake server. |
+| `tests/` | 44 pytest tests: JSON parsing, prompt content, guardrails, fallbacks, phrase memory, all 3 scenarios × 3 personalities, and provider wiring against a fake server. |
 
-## How to run it with AI (Gemini, free)
-
-All commands below are for Windows PowerShell and use Python 3.13 through the `py` launcher. If Python is on your PATH you can type `python` instead of `py -3.13`.
-
-### 1. Get a free Gemini API key
-1. Go to https://aistudio.google.com/apikey and sign in with a Google account.
-2. Click **Create API key** and copy it.
-
-### 2. Open a terminal in the `backend` folder
-Every command must be run from the `backend` folder (the one that contains `llm_wording_engine`):
+## Run it (Windows PowerShell, from the `backend` folder)
 
 ```powershell
-cd "path\to\Multi-Agent-Negotiation-Infosys\backend"
-```
+cd backend
+py -3.13 -m pip install -r llm_wording_engine/requirements-dev.txt   # only needed for the tests
 
-### 3. Create the `.env` file with your key
-```powershell
-Copy-Item llm_wording_engine\.env.example llm_wording_engine\.env
-notepad llm_wording_engine\.env
-```
-In Notepad, put your key after the `=` (no quotes, no spaces) and save:
-```
-GEMINI_API_KEY=your-key-here
-```
-The `.env` file is git-ignored, so the key never goes to GitHub. Never put the key in `.env.example`, which is committed.
+# 1. Tests (no key needed)
+py -3.13 -m pytest llm_wording_engine -q
 
-### 4. Run the demo with the real model
-```powershell
+# 2. Demo without a key (offline rule-based reasoner)
+py -3.13 -m llm_wording_engine.demo --provider offline
+
+# 3. Demo with a real model (Gemini free tier)
+Copy-Item llm_wording_engine/.env.example llm_wording_engine/.env   # then paste your key into that .env (it is git-ignored)
 py -3.13 -m llm_wording_engine.demo --provider gemini
-```
-All three scenarios (takes a few minutes because of free-tier pacing):
-```powershell
 py -3.13 -m llm_wording_engine.demo --provider gemini --scenario all
 ```
 
-### 5. Check that the AI is really being used
-- The header shows `Provider: gemini` and a model name.
-- Every turn ends with **`source: llm | gemini/...`**.
-- The summary at the end says how many turns were `produced by the model`.
-
-If a turn shows `source: fallback`, the model could not answer that turn and the offline writer stepped in; the yellow **Guardrail** line under it says why.
-
-### Run without a key
-```powershell
-py -3.13 -m llm_wording_engine.demo --provider offline
-```
-This uses the built-in rule-based writer (`source: offline`), useful for checking the setup.
-
-### Run the tests (no key needed)
-```powershell
-py -3.13 -m pip install -r llm_wording_engine\requirements-dev.txt
-py -3.13 -m pytest llm_wording_engine -q
-```
-Expected result: `30 passed`.
-
-### Demo options
-| Option | Values | Default |
-|---|---|---|
-| `--provider` | `gemini`, `claude`, `openai`, `ollama`, `auto`, `offline` | `auto` (first key found, else offline) |
-| `--model` | any model name your key can use | automatic |
-| `--scenario` | `vendor`, `job`, `budget`, `all` | `vendor` |
-| `--turns` | max turns in the live exchange | `6` |
-| `--part` | `1` (three personalities), `2` (live exchange), `both` | `both` |
-| `--pause` | seconds between model calls | `4` for Gemini |
-
-Other providers: put `ANTHROPIC_API_KEY=...` or `OPENAI_API_KEY=...` in `.env` and use `--provider claude` or `--provider openai`. For a local model, install Ollama, run `ollama pull llama3.2`, and use `--provider ollama`.
-
-### Choosing a model
-By default the engine uses Gemini's `gemini-flash-lite-latest` alias, which always points at a current fast model. Google retires numbered models over time, so if a run shows `source: fallback` with a "not found" or "no longer available" message, pick another name from your account's list and set it in `.env` as `GEMINI_MODEL=...` or pass `--model NAME`. To list the names your key can use:
+**Choosing a model.** By default the engine uses Gemini's `gemini-flash-lite-latest` alias, which always points at a current fast model. Google retires numbered models over time, so if a run shows `source: fallback` with a "not found" or "no longer available" message, pick another name from your account's list and set it in `.env` as `GEMINI_MODEL=...` or pass `--model NAME`. To list the names your key can use:
 
 ```powershell
 py -3.13 -c "from llm_wording_engine.llm_client import load_dotenv,_get; import os; load_dotenv(); d=_get('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200&key='+os.environ['GEMINI_API_KEY']); print('\n'.join(m['name'] for m in d['models'] if 'generateContent' in m.get('supportedGenerationMethods',[])))"
@@ -105,17 +56,31 @@ py -3.13 -c "from llm_wording_engine.llm_client import load_dotenv,_get; import 
 
 Heavy "thinking" models are slow on the free tier; prefer names with `lite` in them.
 
-### Troubleshooting
-| What you see | Fix |
-|---|---|
-| `No module named llm_wording_engine` | You are not in the `backend` folder. `cd` into it. |
-| `No API key found: running the offline writer` | `.env` is missing, unsaved, or saved as `.env.txt`. It must be `backend\llm_wording_engine\.env`. |
-| `no reply within 45s, retry` | The model is slow. Use a `lite` model (see above). |
-| `HTTP 503 (server busy), retry` | Gemini is briefly busy; the engine retries automatically. |
-| `HTTP 429 (rate limit)` | Free-tier limit reached. Wait a minute, or add `--pause 8`. |
-| `HTTP 404 ... not found / no longer available` | The model name is retired. Pick another from the model list. |
+Options: `--provider gemini|claude|openai|ollama|auto|offline`, `--model NAME`, `--scenario vendor|job|budget|all`, `--turns N`, `--part 1|2|both`, `--pause SECONDS` (spacing between calls for free-tier limits).
 
-Every run is saved to `llm_wording_engine/runs/` as JSON and Markdown (git-ignored).
+Use `python` instead of `py -3.13` if Python is on your PATH. Each turn shows the private reasoning, the decision, the public message, the offer, any guardrail corrections, and whether it came from the model (`source: llm`) or the offline writer.
+
+## Phrase memory: an offline mode that learns
+
+The offline writer does not stay limited to its fixed templates. Every time the online mode runs, clean model-written lines are saved to `llm_wording_engine/memory/phrase_memory.json`, and the offline mode reuses them. The more the online mode is used, the larger and better the offline phrase bank gets.
+
+**How it works**
+1. **Learn (online).** A turn is stored only if it came from the model (`source: llm`) and the guardrails did not have to correct it. With each line it records the situation: personality, decision, opening or reply, round phase (early, mid, late) and how far apart the sides are (close, mid, far).
+2. **Numbers become slots.** Every number in the line is matched to an offer term and replaced by a slot, so "10.5 lakh with 22-day delivery" is stored as `{own.price:lakh} lakh with {own.delivery:plain}-day delivery`. If a number cannot be matched (for example "3 other suppliers"), the line is not stored. Reused lines therefore always carry the numbers of the offer actually being made.
+3. **Reuse (offline or fallback).** The engine still decides the move with its rules, then asks the memory for the best line for that situation. Lines from the same role, phase and gap score higher, lines from conversations that ended in a deal score higher, and lines used in the last few turns are avoided. If nothing fits, the fixed template is used.
+4. **Feedback.** When a demo conversation ends in a deal, the lines used in it gain quality; when it fails, they lose a little.
+
+Duplicates are merged, the file is capped at 600 lines (lowest quality dropped first), writes are atomic, and a damaged file is ignored rather than crashing.
+
+In the demo, each turn shows where its message came from: `learned into memory #id` (online), `phrased from memory #id` or `fixed template` (offline).
+
+```powershell
+py -3.13 -m llm_wording_engine.demo --provider gemini      # grows the memory
+py -3.13 -m llm_wording_engine.demo --provider offline     # reuses it
+py -3.13 -m llm_wording_engine.stats                       # shows what has been learned
+```
+
+Use `--no-memory` to turn it off. In code, memory is opt-in: `WordingEngine(provider="gemini", memory=PhraseMemory())`. The file location can be changed with the `NEGOTIATION_MEMORY_PATH` environment variable. The memory file contains only negotiation lines (no keys), so it can be committed to share what has been learned.
 
 ## Integration contract
 
@@ -149,7 +114,7 @@ result = engine.reason_dict({
 
 ```python
 def write_message(agent, decision, terms, history):
-    req = to_wording_request(agent, history, decision_hint=decision)   # map your models to the dict above
+    req = to_reasoning_request(agent, history, decision_hint=decision)   # map your models to the dict above
     return engine.reason_dict(req)["message"]
 ```
 

@@ -60,8 +60,12 @@ def _own_last_offer(req: WordingRequest) -> Optional[Dict[str, float]]:
 
 class WordingEngine:
     def __init__(self, provider: str = "auto", model: Optional[str] = None, temperature: float = 0.7,
-                 client: Optional[LLMClient] = None):
-        """provider: gemini | claude | openai | ollama | auto | offline. Pass client= to inject one (tests)."""
+                 client: Optional[LLMClient] = None, memory=None):
+        """provider: gemini | claude | openai | ollama | auto | offline. Pass client= to inject one (tests).
+
+        memory: optional PhraseMemory. Online turns are learned into it; offline turns reuse it.
+        """
+        self.memory = memory
         self.client = client if client is not None else make_client(provider, model, temperature)
         self.provider = self.client.provider if self.client else "offline"
         self.model = self.client.model if self.client else "rule-based"
@@ -108,11 +112,23 @@ class WordingEngine:
         if tone not in ("firm", "warm", "wary", "neutral"):
             tone = "neutral"
 
+        # phrase memory: learn from clean model turns, reuse in offline/fallback turns
+        phrasing, memory_id = ("model" if source == "llm" else "template"), None
+        if self.memory is not None:
+            if source == "llm":
+                memory_id = self.memory.learn(req, decision, message, offer, tone, notes, self.provider, self.model)
+            else:
+                hit = self.memory.recall(req, decision, offer, tone)
+                if hit:
+                    message, memory_id = hit
+                    phrasing = "memory"
+
         return WordingResult(
             agent_id=a.id, decision=decision, reasoning=reasoning, message=message, offer=offer, tone=tone,
             source=source, provider=self.provider, model=self.model,
             utility_of_table=utility(a, req.offer_on_table), utility_of_offer=utility(a, offer),
-            guardrail_notes=notes, latency_ms=int((time.time() - t0) * 1000))
+            guardrail_notes=notes, latency_ms=int((time.time() - t0) * 1000),
+            phrasing=phrasing, memory_id=memory_id)
 
     def reason_dict(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """Same as reason() but dict in, dict out: handy for an HTTP endpoint."""

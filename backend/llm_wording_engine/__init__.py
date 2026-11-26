@@ -10,6 +10,7 @@ Standalone: depends only on the Python standard library.
 """
 from .schema import Issue, AgentProfile, Turn, WordingRequest, WordingResult
 from .engine import WordingEngine
+from .memory import PhraseMemory
 
-__all__ = ["Issue", "AgentProfile", "Turn", "WordingRequest", "WordingResult", "WordingEngine"]
+__all__ = ["Issue", "AgentProfile", "Turn", "WordingRequest", "WordingResult", "WordingEngine", "PhraseMemory"]
 __version__ = "1.0.0"

@@ -24,6 +24,7 @@ from pathlib import Path
 
 from .engine import WordingEngine
 from .llm_client import set_logger
+from .memory import PhraseMemory
 from .prompts import fmt_offer
 from .sample_scenarios import SCENARIOS, agents_for
 from .schema import WordingRequest, Turn
@@ -58,7 +59,9 @@ def show(res, agent, header):
               f"  {C['d']}(worth {res.utility_of_offer:.2f} to {agent.name}){C['x']}")
     for n in res.guardrail_notes:
         print(f"  {C['y']}Guardrail:{C['x']} {n}")
-    print(f"  {C['d']}source: {res.source} | {res.provider}/{res.model} | {res.latency_ms} ms{C['x']}")
+    ph = {"model": "", "memory": f" | phrased from memory #{res.memory_id}", "template": " | fixed template"}[res.phrasing]
+    learned = f" | learned into memory #{res.memory_id}" if res.phrasing == "model" and res.memory_id else ""
+    print(f"  {C['d']}source: {res.source} | {res.provider}/{res.model} | {res.latency_ms} ms{ph}{learned}{C['x']}")
 
 
 def think(engine, req, who):
@@ -113,6 +116,9 @@ def part_exchange(engine, scenario, turns, log, pause):
         entries.append({"turn": k + 1, "agent": agent.name, "result": res.to_dict()})
         history.append(Turn(speaker=agent.name, message=res.message, offer=res.offer, decision=res.decision, round=rnd))
         if res.decision in ("accept", "reject"):
+            if engine.memory is not None:
+                ids = [e["result"]["memory_id"] for e in entries if e["result"]["memory_id"]]
+                engine.memory.reinforce(ids, deal=res.decision == "accept")
             end = "DEAL" if res.decision == "accept" else "NO DEAL"
             print(f"\n  {DEC[res.decision]}{C['b']}{end}{C['x']}"
                   + (f" on: {fmt_offer(agent, table)}" if res.decision == "accept" else ""))
@@ -153,10 +159,13 @@ def main(argv=None):
     ap.add_argument("--turns", type=int, default=6, help="max turns in the live exchange")
     ap.add_argument("--part", default="both", help="1 | 2 | both")
     ap.add_argument("--pause", type=float, default=None, help="seconds between model calls (helps free-tier limits)")
+    ap.add_argument("--no-memory", action="store_true", help="do not learn into or reuse the phrase memory")
     args = ap.parse_args(argv)
 
     set_logger(lambda m: print(f"  {C['y']}{m}{C['x']}", flush=True))
-    engine = WordingEngine(provider=args.provider, model=args.model)
+    memory = None if args.no_memory else PhraseMemory()
+    start_size = len(memory) if memory is not None else 0
+    engine = WordingEngine(provider=args.provider, model=args.model, memory=memory)
     pause = args.pause if args.pause is not None else (4.0 if engine.provider == "gemini" else 0.5 if engine.client else 0)
     line("=")
     print(f"{C['b']}LLM WORDING ENGINE  |  Multi-Agent Negotiation Simulator  |  Milestone 2: LLM wording{C['x']}")
@@ -164,6 +173,9 @@ def main(argv=None):
           f"Started: {datetime.now().strftime('%d-%m-%Y %H:%M:%S')}")
     if not engine.client:
         print(f"{C['y']}No API key found: running the offline writer. Set GEMINI_API_KEY (or another key) for real model output.{C['x']}")
+    if memory is not None:
+        print(f"Phrase memory: {len(memory)} learned lines "
+              f"({'online turns are learned into it' if engine.client else 'offline turns reuse it'})")
     log = {"provider": engine.provider, "model": engine.model, "started": datetime.now().isoformat(), "part1": [], "part2": []}
 
     if args.part in ("1", "both"):
@@ -179,6 +191,9 @@ def main(argv=None):
     line("=")
     print(f"{C['b']}Summary{C['x']}: {calls} agent turns | {llm} produced by the model | "
           f"{fixes} guardrail corrections | avg {int(sum(r['latency_ms'] for r in res) / max(1, calls))} ms per turn")
+    if memory is not None:
+        print(f"{C['b']}Phrase memory{C['x']}: {start_size} -> {len(memory)} lines "
+              f"(+{memory.learned_now} learned, {memory.reused_now} reused this run)")
     path = save(log)
     print(f"Saved: {path.with_suffix('.json').name} and {path.with_suffix('.md').name} in llm_wording_engine/runs/")
     line("=")

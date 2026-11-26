@@ -1,0 +1,32 @@
+{
+ "version": 1,
+ "updated": "2026-11-26 13:01:20",
+ "count": 1,
+ "entries": [
+  {
+   "id": "c88da329dc6a",
+   "template": "Your opening terms are significantly outside our financial and operational parameters, especially the {table.delivery:plain}-day delivery timeline. We require this bulk hardware order delivered within {own.delivery:plain} days with a {own.warranty:plain}-month warranty, at a total price of Rs {own.price:lakh} lakh.",
+   "decision": "counter",
+   "tone": "firm",
+   "agent_id": "buyer",
+   "role": "procurement lead",
+   "personality": "aggressive",
+   "opening": false,
+   "phase": "early",
+   "gap": "far",
+   "scenario": "Vendor pricing: bulk hardware order",
+   "slots": [
+    "own.delivery",
+    "own.price",
+    "own.warranty",
+    "table.delivery"
+   ],
+   "quality": 1.0,
+   "seen": 1,
+   "used": 0,
+   "wins": 0,
+   "learned_from": "gemini/gemini-flash-lite-latest",
+   "created": "2026-11-26 13:01:20"
+  }
+ ]
+}

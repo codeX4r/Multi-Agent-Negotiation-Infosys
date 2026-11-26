@@ -115,6 +115,8 @@ class WordingResult:
     utility_of_offer: Optional[float] = None
     guardrail_notes: List[str] = field(default_factory=list)
     latency_ms: int = 0
+    phrasing: str = "model"           # model | memory | template: where the public message came from
+    memory_id: Optional[str] = None   # phrase-memory entry learned (online) or reused (offline)
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
