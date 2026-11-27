@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Practice Mode Playground</title>
+<style>
+:root{--bg:#0b1020;--panel:#131b2e;--panel2:#19243a;--line:#2b3853;--text:#eef3ff;--muted:#9aa9c2;--blue:#7aa7ff;--cyan:#6ee7e0;--green:#67d6a3;--amber:#f4c66a;--red:#f08b91;--violet:#b69cff}
+*{box-sizing:border-box}
+html,body{margin:0;background:radial-gradient(1200px 600px at 70% -10%,#1b2b4a 0,var(--bg) 60%) fixed;color:var(--text);font:14px/1.45 "Segoe UI",system-ui,-apple-system,Arial,sans-serif}
+button,select,input{font:inherit;color:inherit}
+header{display:flex;align-items:center;gap:16px;padding:14px 22px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+header h1{font-size:17px;margin:0;font-weight:650;letter-spacing:.2px}
+header .sub{color:var(--muted);font-size:12.5px}
+.tabs{margin-left:auto;display:flex;gap:4px;background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:3px}
+.tabs button{background:none;border:0;padding:6px 12px;border-radius:7px;color:var(--muted);cursor:pointer}
+.tabs button.on{background:var(--panel2);color:var(--text)}
+main{display:grid;grid-template-columns:270px minmax(0,1fr) 330px;gap:14px;padding:14px 22px;height:calc(100vh - 62px)}
+@media (max-width:1100px){main{grid-template-columns:1fr;height:auto}}
+.card{background:linear-gradient(180deg,var(--panel),#10172a);border:1px solid var(--line);border-radius:12px;padding:14px;min-height:0}
+.card h2{font-size:11.5px;text-transform:uppercase;letter-spacing:.9px;color:var(--muted);margin:0 0 10px;font-weight:600}
+label.f{display:block;color:var(--muted);font-size:12px;margin:10px 0 4px}
+select{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:7px 9px}
+.seg{display:grid;grid-template-columns:1fr 1fr;background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:3px;gap:3px}
+.seg button{border:0;background:none;padding:7px;border-radius:7px;cursor:pointer;color:var(--muted)}
+.seg button.on{background:#22345a;color:var(--text)}
+.seg button.on.kit{box-shadow:inset 0 0 0 1px var(--green)}
+.seg button.on.raw{box-shadow:inset 0 0 0 1px var(--red)}
+.btn{background:#22345a;border:1px solid #33507f;border-radius:8px;padding:8px 12px;cursor:pointer}
+.btn:hover{border-color:var(--blue)}
+.btn.primary{background:linear-gradient(180deg,#2b5a8a,#21466e);border-color:#3f74ad}
+.btn.good{border-color:#2f7a5b}.btn.bad{border-color:#7a3b44}
+.btn:disabled{opacity:.45;cursor:default}
+.me{margin-top:14px;padding:10px;border:1px solid var(--line);border-radius:9px;background:#0f1628;font-size:12.5px}
+.me b{display:block;font-size:13.5px;margin-bottom:2px}
+.me .lim{color:var(--muted);margin-top:6px}
+.note{color:var(--muted);font-size:12px;margin-top:12px}
+.chat{display:flex;flex-direction:column;padding:0;overflow:hidden}
+.chathead{display:flex;justify-content:space-between;align-items:center;padding:11px 14px;border-bottom:1px solid var(--line);font-size:12.5px;color:var(--muted)}
+.chathead .st{color:var(--text)}
+.log{flex:1;overflow:auto;padding:12px 14px;display:flex;flex-direction:column;gap:10px;min-height:260px}
+.sys{color:var(--muted);font-size:12px;text-align:center}
+.msg{max-width:86%;border:1px solid var(--line);background:var(--panel2);border-radius:11px;padding:9px 11px}
+.msg.you{align-self:flex-end;background:#1d3150;border-color:#2e4c7a}
+.msg .who{font-size:12px;color:var(--muted);display:flex;gap:8px;align-items:center;margin-bottom:3px}
+.msg .who b{color:var(--text);font-weight:600}
+.dec{font-size:10.5px;letter-spacing:.6px;padding:1px 6px;border-radius:5px;border:1px solid var(--line)}
+.dec.accept{color:var(--green);border-color:#2f7a5b}.dec.reject{color:var(--red);border-color:#7a3b44}.dec.counter,.dec.open{color:var(--amber);border-color:#7a6330}
+.terms{margin-top:6px;font-size:12px;color:var(--cyan)}
+.kitnote{margin-top:6px;font-size:11.5px;color:var(--amber)}
+.err{margin-top:6px;font-size:11.5px;color:var(--red)}
+.chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:7px}
+.chip{font-size:11px;padding:2px 7px;border-radius:999px;border:1px solid var(--line);color:var(--muted);cursor:help}
+.chip.p{color:var(--green);border-color:#285f49}.chip.f{color:var(--red);border-color:#6a333b}
+.compose{border-top:1px solid var(--line);padding:10px 14px;background:#0f1628}
+.sliders{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:6px 16px;margin-bottom:8px}
+.sl{font-size:12px;color:var(--muted)}
+.sl .v{float:right;color:var(--text)}
+.sl input{width:100%;accent-color:var(--cyan)}
+.row{display:flex;gap:8px}
+.row input[type=text]{flex:1;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+.row input[type=text]:focus{outline:none;border-color:var(--blue)}
+.hint{font-size:11.5px;color:var(--muted);margin-top:6px}
+.score{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.score div{background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:9px}
+.score b{display:block;font-size:22px;font-weight:650}
+.score span{font-size:11.5px;color:var(--muted)}
+.clist{display:flex;flex-direction:column;gap:6px;overflow:auto;max-height:calc(100vh - 290px)}
+.ci{display:grid;grid-template-columns:1fr auto;gap:2px 8px;font-size:12.5px;padding:7px 9px;border:1px solid var(--line);border-radius:8px;background:#0f1628}
+.ci .n{color:var(--muted);font-size:11.5px}
+.ci .d{grid-column:1/3;color:var(--muted);font-size:11.5px}
+.ci.f{border-color:#6a333b}
+.ok{color:var(--green)}.no{color:var(--red)}
+.hard{font-size:10px;color:var(--violet);border:1px solid #4b3f7a;border-radius:4px;padding:0 4px;margin-left:5px}
+#report{display:none;padding:14px 22px}
+#report table{width:100%;border-collapse:collapse;font-size:13px}
+#report th,#report td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left}
+#report th{color:var(--muted);font-weight:600;font-size:12px}
+.bar{display:inline-block;height:6px;border-radius:3px;background:#2a3550;width:80px;vertical-align:middle;margin-right:6px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--green)}
+.bar.lo i{background:var(--red)}
+.mut{color:var(--muted)}
+</style>
+</head>
+<body>
+<header>
+  <h1>Practice Mode Playground</h1>
+  <span class="sub">Milestone 3.4 realism kit, running on the team's practice-mode engine in your browser. No server, no API key.</span>
+  <div class="tabs"><button id="tPlay" class="on">Play</button><button id="tRep">Validation report</button></div>
+</header>
+<main id="play">
+  <section class="card">
+    <h2>Session</h2>
+    <label class="f">Scenario</label>
+    <select id="scenario"><option value="vendor">Vendor contract</option><option value="job">Job offer</option><option value="budget">Project budget</option></select>
+    <label class="f">Your seat</label>
+    <select id="seat"></select>
+    <label class="f">Engine</label>
+    <div class="seg"><button id="kOn" class="on kit">With the kit</button><button id="kOff">Current engine</button></div>
+    <label class="f">Seed</label>
+    <div class="row"><input type="text" id="seed" style="width:90px;flex:none"><button class="btn primary" id="start" style="flex:1">Start session</button></div>
+    <div class="me" id="me"></div>
+    <div class="note">Try the same seed with and without the kit. Make a concession, lowball, type an offer in words, or be rude, then watch the checks on the right.</div>
+  </section>
+  <section class="card chat">
+    <div class="chathead"><span id="title"></span><span class="st" id="status"></span></div>
+    <div class="log" id="log"></div>
+    <div class="compose">
+      <div class="sliders" id="sliders"></div>
+      <div class="row">
+        <input type="text" id="text" placeholder="Write a message, or an offer in words, e.g. I can do 10.5 lakh with 20 days delivery">
+        <button class="btn" id="send">Send</button>
+        <button class="btn primary" id="offer">Offer sliders</button>
+        <button class="btn good" id="accept">Accept</button>
+        <button class="btn bad" id="walk">Walk</button>
+      </div>
+      <div class="hint">Send reads terms out of your text (with the kit). Offer sliders proposes the slider values, with your text as the message.</div>
+    </div>
+  </section>
+  <section class="card">
+    <h2>Realism checks, this session</h2>
+    <div class="score"><div><b id="sPass" class="ok">0</b><span>passed</span></div><div><b id="sFail">0</b><span>failed</span></div></div>
+    <div class="clist" id="checks"></div>
+  </section>
+</main>
+<section id="report"></section>
+<script>window.__REPORT__ = /*REPORT*/null;</script>
+<script>/*BUNDLE*/</script>
+</body>
+</html>

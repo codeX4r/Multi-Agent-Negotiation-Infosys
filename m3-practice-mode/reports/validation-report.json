@@ -1,0 +1,314 @@
+{
+ "res": {
+  "before": {
+   "vendor": {
+    "within_range": {
+     "pass": 6185,
+     "total": 6185
+    },
+    "own_limits": {
+     "pass": 5227,
+     "total": 6185,
+     "example": "buyer/fair: offered past its own limit on Payment"
+    },
+    "offer_submitted": {
+     "pass": 2510,
+     "total": 2510
+    },
+    "lowball_pushback": {
+     "pass": 1553,
+     "total": 1553
+    },
+    "acknowledges": {
+     "pass": 759,
+     "total": 4315,
+     "example": "buyer/fair: lowball -> \"We can't accept that; price at ₹9,50,000 is out of range. We need pric…\""
+    },
+    "reciprocity": {
+     "pass": 708,
+     "total": 747,
+     "example": "buyer/fair: human conceded 10 pts; AI gave up 0.0 pts, moved 0.0 pts towards the human"
+    },
+    "no_bad_accept": {
+     "pass": 966,
+     "total": 966
+    },
+    "no_stall": {
+     "pass": 280,
+     "total": 280
+    },
+    "deal_reachable": {
+     "pass": 45,
+     "total": 120,
+     "example": "buyer/fair: breakdown (Round limit reached without agreement)"
+    },
+    "typed_offer": {
+     "pass": 0,
+     "total": 462,
+     "example": "buyer/typer: text mentions Payment, Price, Delivery, Warranty but no offer was recorded"
+    }
+   },
+   "job": {
+    "within_range": {
+     "pass": 4078,
+     "total": 4078
+    },
+    "own_limits": {
+     "pass": 3705,
+     "total": 4078,
+     "example": "candidate/fair: offered past its own limit on Joining bonus"
+    },
+    "no_bad_accept": {
+     "pass": 2442,
+     "total": 2442
+    },
+    "offer_submitted": {
+     "pass": 2454,
+     "total": 2454
+    },
+    "lowball_pushback": {
+     "pass": 1259,
+     "total": 1259
+    },
+    "acknowledges": {
+     "pass": 782,
+     "total": 4132,
+     "example": "candidate/fair: lowball -> \"That doesn't work for us, base salary at ₹21.0 LPA is out of range. St…\""
+    },
+    "reciprocity": {
+     "pass": 869,
+     "total": 911,
+     "example": "candidate/fair: human conceded 11 pts; AI gave up -1.6 pts, moved -1.7 pts towards the human"
+    },
+    "no_stall": {
+     "pass": 280,
+     "total": 280
+    },
+    "deal_reachable": {
+     "pass": 95,
+     "total": 120,
+     "example": "candidate/typer: breakdown (Round limit reached without agreement)"
+    },
+    "typed_offer": {
+     "pass": 0,
+     "total": 475,
+     "example": "candidate/typer: text mentions Base salary, Joining bonus, Joining date, Remote days but no offer was recorded"
+    }
+   },
+   "budget": {
+    "offer_submitted": {
+     "pass": 0,
+     "total": 8046,
+     "example": "eng/fair: offer silently dropped (engine returned ok but recorded nothing)"
+    },
+    "within_range": {
+     "pass": 3177,
+     "total": 3177
+    },
+    "own_limits": {
+     "pass": 3177,
+     "total": 3177
+    },
+    "no_bad_accept": {
+     "pass": 6027,
+     "total": 6027
+    },
+    "no_stall": {
+     "pass": 40,
+     "total": 280,
+     "example": "eng/fair: 28 turn(s) where the move was ignored"
+    },
+    "deal_reachable": {
+     "pass": 0,
+     "total": 120,
+     "example": "eng/fair: breakdown (Round limit reached without agreement)"
+    },
+    "typed_offer": {
+     "pass": 0,
+     "total": 590,
+     "example": "eng/typer: text mentions Engineering, Timeline but no offer was recorded"
+    }
+   }
+  },
+  "after": {
+   "vendor": {
+    "within_range": {
+     "pass": 4793,
+     "total": 4793
+    },
+    "own_limits": {
+     "pass": 3762,
+     "total": 4793,
+     "example": "buyer/fair: offered past its own limit on Payment"
+    },
+    "offer_submitted": {
+     "pass": 2464,
+     "total": 2464
+    },
+    "lowball_pushback": {
+     "pass": 1735,
+     "total": 1735
+    },
+    "acknowledges": {
+     "pass": 4231,
+     "total": 4407,
+     "example": "buyer/bluffer: threat -> \"If another supplier can truly match our quality, take that option. Oth…\""
+    },
+    "reciprocity": {
+     "pass": 719,
+     "total": 729,
+     "example": "vendor/fair: human conceded 13 pts; AI gave up 0.0 pts, moved -2.1 pts towards the human"
+    },
+    "no_bad_accept": {
+     "pass": 1066,
+     "total": 1066
+    },
+    "no_stall": {
+     "pass": 280,
+     "total": 280
+    },
+    "deal_reachable": {
+     "pass": 113,
+     "total": 120,
+     "example": "vendor/fair: breakdown (Round limit reached without agreement)"
+    },
+    "typed_offer": {
+     "pass": 268,
+     "total": 268
+    }
+   },
+   "job": {
+    "within_range": {
+     "pass": 3150,
+     "total": 3150
+    },
+    "own_limits": {
+     "pass": 2772,
+     "total": 3150,
+     "example": "candidate/fair: offered past its own limit on Joining bonus"
+    },
+    "no_bad_accept": {
+     "pass": 2066,
+     "total": 2066
+    },
+    "offer_submitted": {
+     "pass": 2321,
+     "total": 2321
+    },
+    "lowball_pushback": {
+     "pass": 1338,
+     "total": 1338
+    },
+    "acknowledges": {
+     "pass": 3831,
+     "total": 3831
+    },
+    "reciprocity": {
+     "pass": 799,
+     "total": 806,
+     "example": "candidate/fair: human conceded 3 pts; AI gave up 0.0 pts, moved 0.0 pts towards the human"
+    },
+    "no_stall": {
+     "pass": 280,
+     "total": 280
+    },
+    "deal_reachable": {
+     "pass": 120,
+     "total": 120
+    },
+    "typed_offer": {
+     "pass": 258,
+     "total": 258
+    }
+   },
+   "budget": {
+    "offer_submitted": {
+     "pass": 1885,
+     "total": 1885
+    },
+    "within_range": {
+     "pass": 3440,
+     "total": 3440
+    },
+    "own_limits": {
+     "pass": 3440,
+     "total": 3440
+    },
+    "acknowledges": {
+     "pass": 2039,
+     "total": 2163,
+     "example": "eng/bluffer: threat -> \"I understand you could escalate. Let us agree a split ourselves. I can…\""
+    },
+    "reciprocity": {
+     "pass": 787,
+     "total": 853,
+     "example": "eng/fair: human conceded 5 pts; AI gave up 0.0 pts, moved -9.3 pts towards the human"
+    },
+    "no_bad_accept": {
+     "pass": 1029,
+     "total": 1029
+    },
+    "no_stall": {
+     "pass": 280,
+     "total": 280
+    },
+    "deal_reachable": {
+     "pass": 120,
+     "total": 120
+    },
+    "lowball_pushback": {
+     "pass": 738,
+     "total": 738
+    },
+    "typed_offer": {
+     "pass": 259,
+     "total": 259
+    }
+   }
+  }
+ },
+ "sessions": {
+  "before": {
+   "vendor": {
+    "deals": 56,
+    "total": 280,
+    "stuck": 0,
+    "rounds": 3801
+   },
+   "job": {
+    "deals": 163,
+    "total": 280,
+    "stuck": 0,
+    "rounds": 3402
+   },
+   "budget": {
+    "deals": 0,
+    "total": 280,
+    "stuck": 240,
+    "rounds": 4877
+   }
+  },
+  "after": {
+   "vendor": {
+    "deals": 169,
+    "total": 280,
+    "stuck": 0,
+    "rounds": 3059
+   },
+   "job": {
+    "deals": 197,
+    "total": 280,
+    "stuck": 0,
+    "rounds": 2725
+   },
+   "budget": {
+    "deals": 241,
+    "total": 280,
+    "stuck": 0,
+    "rounds": 2393
+   }
+  }
+ },
+ "games": 20,
+ "seconds": 137.503
+}
