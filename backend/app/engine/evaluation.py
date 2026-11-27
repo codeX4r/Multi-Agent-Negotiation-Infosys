@@ -21,7 +21,33 @@ CLIMATE_PRESSURE = {
     "volatile": 0.32,
     "crisis": 0.55,
 }
+# Faratin-Jennings time-dependent concession beta per personality:
+#   beta < 1 (Boulware / aggressive): holds firm early, concedes near deadline
+#   beta = 1 (Linear / risk_averse): steady concession over time
+#   beta > 1 (Conceder / collaborative): concedes early to build momentum
+CONCESSION_BETA = {
+    "aggressive": 0.35,
+    "risk_averse": 1.0,
+    "collaborative": 2.2,
+}
 
+
+def concession_curve_factor(personality: str, round_no: int, max_rounds: int) -> float:
+    """Faratin-Jennings time-dependent concession factor f(t) = (t / t_max)^(1 / beta)."""
+    beta = CONCESSION_BETA.get(personality, 1.0)
+    t = max(0.0, min(1.0, round_no / max(1, max_rounds)))
+    return t ** (1.0 / beta)
+
+
+def logrolling_weight_factor(weight: float) -> float:
+    """Concede faster on low-priority issues and protect high-priority ones.
+
+    Examples:
+      weight = 0.10 -> 1.35x concession speed (give ground easily)
+      weight = 0.50 -> 0.75x concession speed (protect priority)
+      weight = 0.70 -> 0.45x concession speed (hold firm)
+    """
+    return max(0.35, min(1.5, 1.5 - 1.5 * weight))
 
 def _score(value: float, worst: float, best: float) -> float:
     """Scale a value to 0..1 where 0 = walk-away point and 1 = ideal."""
@@ -131,11 +157,13 @@ def _concede(
     constraint: SumConstraint | None = None,
     climate: str = "volatile",
 ) -> Terms:
-    """Move the agent's own position toward its walk-away point."""
+    """Move the agent's position toward its walk-away point using
+    Faratin-Jennings concession curves and weight-sensitive logrolling.
+    """
     rate = CONCESSION_RATE[agent.personality]
-    pressure = 1 + (round_no / max_rounds)      # concede faster as time runs out
-    climate_pressure = 1 + CLIMATE_PRESSURE.get(climate, 0.32)  # crisis gives more ground per step
-    step = min(1.0, rate * pressure * climate_pressure)
+    curve = concession_curve_factor(agent.personality, round_no, max_rounds)
+    climate_pressure = 1 + CLIMATE_PRESSURE.get(climate, 0.32)
+    base_step = min(1.0, rate * (0.4 + 1.6 * curve) * climate_pressure)
 
     if issues is not None:
         values = {}
@@ -149,20 +177,23 @@ def _concede(
                 values[field] = now
                 continue
 
-            raw = now + (walk_away - now) * step * 0.5
+            weight = agent.weights.get(issue.id, 0.25)
+            issue_step = min(1.0, base_step * logrolling_weight_factor(weight))
+            raw = now + (walk_away - now) * issue_step * 0.5
             units = round((raw - issue.min) / issue.step)
             value = issue.min + units * issue.step
             value = max(issue.min, min(issue.max, value))
             if walk_away > now:
                 value = min(value, walk_away)
-                if value <= now:
+                if value <= now and weight <= 0.35:
                     value = min(walk_away, now + issue.step)
             else:
                 value = max(value, walk_away)
-                if value >= now:
+                if value >= now and weight <= 0.35:
                     value = max(walk_away, now - issue.step)
             value = max(issue.min, min(issue.max, value))
             values[field] = int(value) if float(value).is_integer() else value
+
         if constraint is not None:
             fields_by_id = {issue.id: _term_field(issue) for issue in issues}
             derived_field = fields_by_id[constraint.derived]
@@ -174,56 +205,46 @@ def _concede(
         return Terms.model_validate({**current.model_dump(), **values})
 
     specs = (
-        ("price", 900000, 1300000, 10000),
-        ("delivery_days", 10, 45, 1),
-        ("warranty_months", 6, 36, 6),
-        ("payment_days", 0, 60, 15),
+        ("price", "price", 900000, 1300000, 10000),
+        ("delivery", "delivery_days", 10, 45, 1),
+        ("warranty", "warranty_months", 6, 36, 6),
+        ("payment", "payment_days", 0, 60, 15),
     )
 
     def snap(value: float, minimum: int, issue_step: int) -> int:
         return int(minimum + round((value - minimum) / issue_step) * issue_step)
 
-    def move(name: str, now: int | float, batna: int | float,
+    def move(issue_id: str, now: int | float, batna: int | float,
              minimum: int, maximum: int, issue_step: int) -> int:
+        weight = agent.weights.get(issue_id, 0.25)
+        step = min(1.0, base_step * logrolling_weight_factor(weight))
         raw = now + (batna - now) * step * 0.5
         value = snap(raw, minimum, issue_step)
         value = max(minimum, min(maximum, value))
 
         if batna > now:
             value = max(value, min(int(now) + issue_step, int(batna)))
+            value = min(value, int(batna))
         elif batna < now:
             value = min(value, max(int(now) - issue_step, int(batna)))
-
-        value = max(minimum, min(maximum, value))
-        if batna > now:
-            value = min(value, int(batna))
-        else:
             value = max(value, int(batna))
         return int(value)
 
     values = {
-        "price": move("price", current.price, agent.batna.price, 900000, 1300000, 10000),
-        "delivery_days": move("delivery_days", current.delivery_days, agent.batna.delivery_days, 10, 45, 1),
-        "warranty_months": move("warranty_months", current.warranty_months, agent.batna.warranty_months, 6, 36, 6),
-        "payment_days": move("payment_days", current.payment_days, agent.batna.payment_days, 0, 60, 15),
+        field: move(issue_id, getattr(current, field), getattr(agent.batna, field), minimum, maximum, issue_step)
+        for issue_id, field, minimum, maximum, issue_step in specs
     }
 
-    selected_name = specs[(round_no - 1) % len(specs)][0]
-    selected_minimum, selected_maximum, selected_step = next(
-        (minimum, maximum, issue_step)
-        for name, minimum, maximum, issue_step in specs
-        if name == selected_name
-    )
-    now = getattr(current, selected_name)
-    batna = getattr(agent.batna, selected_name)
-    selected = values[selected_name]
-    if now != batna and selected == now:
-        if batna > now:
-            selected = min(int(batna), int(now) + selected_step)
-        else:
-            selected = max(int(batna), int(now) - selected_step)
-        selected = max(selected_minimum, min(selected_maximum, selected))
-        values[selected_name] = int(selected)
+    # Ensure at least one issue moves per round, prioritizing lowest-weight issues first (logrolling)
+    if all(values[field] == getattr(current, field) for _, field, _, _, _ in specs):
+        ordered = sorted(specs, key=lambda s: agent.weights.get(s[0], 0.25))
+        for _, field, minimum, maximum, issue_step in ordered:
+            now = getattr(current, field)
+            batna = getattr(agent.batna, field)
+            if now != batna:
+                moved = min(int(batna), int(now) + issue_step) if batna > now else max(int(batna), int(now) - issue_step)
+                values[field] = max(minimum, min(maximum, moved))
+                break
 
     return Terms(
         price=values["price"],
