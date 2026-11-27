@@ -32,3 +32,4 @@ class NegotiationResponse(BaseModel):
     final_terms: Optional[dict] = None
     satisfaction: dict[str, float]
     transcript: list[TranscriptEntry]
+    analytics: dict[str, Any] | None = None
