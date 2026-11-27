@@ -43,7 +43,34 @@ export interface BackendTranscriptEntry<Terms = BackendTerms> {
   offer: Terms | null;
   reasoning?: string;
 }
+export interface IssueZopa {
+  issue_id: string;
+  has_zopa: boolean;
+  low: number | null;
+  high: number | null;
+  width: number;
+  overlap_ratio: number;
+}
 
+export interface ZopaReport {
+  deal_possible: boolean;
+  average_overlap_ratio: number;
+  issues: Record<string, IssueZopa>;
+}
+
+export interface ParetoReport {
+  is_pareto_optimal: boolean;
+  efficiency_score: number;
+  agreement_joint_utility: number;
+  best_feasible_joint_utility: number;
+  value_left_on_table: number;
+  party_utilities: Record<string, number>;
+}
+
+export interface BackendAnalytics {
+  zopa: ZopaReport;
+  pareto: ParetoReport | null;
+}
 interface BackendResultBase<Scenario extends BackendScenario, Terms> {
   scenario: Scenario;
   outcome: "deal" | "breakdown" | "deadlock";
@@ -59,6 +86,7 @@ interface BackendResultBase<Scenario extends BackendScenario, Terms> {
     skill: "novice" | "skilled" | "expert";
   }>;
   transcript: BackendTranscriptEntry<Terms>[];
+  analytics?: BackendAnalytics | null;
 }
 
 export type BackendNegotiationResult =

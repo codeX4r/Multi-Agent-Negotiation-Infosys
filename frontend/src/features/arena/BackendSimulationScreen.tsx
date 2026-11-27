@@ -1,5 +1,5 @@
 "use client";
-
+import { AnalyticsSummaryCard } from "./AnalyticsSummaryCard";
 import { useEffect, useState } from "react";
 import { ArrowLeft, Play } from "lucide-react";
 import { Button } from "@/components/ui/Button";
@@ -78,11 +78,11 @@ function formatTerms(scenario: BackendNegotiationResult["scenario"], terms: Back
   const payment = terms.payment_days === undefined
     ? []
     : [[
-        scenario === "job" ? "Payment days" : "Payment",
-        scenario === "job"
-          ? `${number(terms.payment_days)} days`
-          : `${number(terms.payment_days)} days after delivery`,
-      ]];
+      scenario === "job" ? "Payment days" : "Payment",
+      scenario === "job"
+        ? `${number(terms.payment_days)} days`
+        : `${number(terms.payment_days)} days after delivery`,
+    ]];
 
   if (scenario === "vendor") {
     return [
@@ -211,6 +211,7 @@ export function BackendSimulationScreen() {
               ))}
             </div>
           </Card>
+          <AnalyticsSummaryCard analytics={result.analytics} />
 
           <Card className="backend-run">
             <h3>Negotiation transcript</h3>
