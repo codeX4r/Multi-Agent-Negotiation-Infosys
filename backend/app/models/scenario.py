@@ -1,5 +1,5 @@
 """Scenario response models."""
-
+from typing import Any
 from pydantic import BaseModel
 from typing import Literal, Optional
 
