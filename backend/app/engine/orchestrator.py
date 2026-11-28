@@ -4,7 +4,7 @@ Replaces the deterministic rule-based engine with LLM-powered agents.
 """
 
 from __future__ import annotations
-
+from app.engine.analytics import analyze_zopa, pareto_efficiency
 import logging
 from typing import Optional
 
@@ -290,7 +290,14 @@ def _run_configured_negotiation(config: NegotiationConfig, scenario: str) -> dic
 
     # Build final response
     final_terms = on_table.model_dump(exclude_none=True) if outcome == "deal" else None
-
+    # Compute ZOPA & Pareto analytics
+    agent_list = [agent_profiles[party.id] for party in config.parties]
+    zopa_report = analyze_zopa(agent_list, issues)
+    pareto_report = (
+        pareto_efficiency(agent_list, on_table, issues)
+        if outcome == "deal" and on_table is not None
+        else None
+    )
     return {
         "scenario": scenario,
         "personalities": {party.role: party.personality for party in config.parties},
@@ -312,6 +319,10 @@ def _run_configured_negotiation(config: NegotiationConfig, scenario: str) -> dic
             for party in config.parties
         },
         "transcript": transcript,
+        "analytics": {
+            "zopa": zopa_report,
+            "pareto": pareto_report,
+        },
     }
 
 
