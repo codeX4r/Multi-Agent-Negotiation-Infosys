@@ -45,7 +45,7 @@ function buildRequest(
   const getPersonality = (roleId: string) => {
     const role = scenario.roles.find((candidate) => candidate.id === roleId);
     const personality: PersonalityType =
-      roleOverrides[roleId]?.personality ?? role?.personality ?? "collaborative";
+      roleOverrides?.[roleId]?.personality ?? role?.personality ?? "collaborative";
     return toBackendPersonality(personality);
   };
 
